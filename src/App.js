@@ -723,7 +723,11 @@ function AnalyseBail({ userId }) {
                 <h2 className="fr-mb-2w">💳 Paiement sécurisé</h2>
                 <p className="fr-text--lg fr-mb-4w">Analyse complète : <strong>1.99€</strong></p>
                 
-                <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+                <Elements stripe={stripePromise} options={{ 
+                  clientSecret, 
+                  appearance: { theme: 'stripe' },
+                  paymentMethodTypes: ['card']
+                }}>
                   <CheckoutForm 
                     onSuccess={runPaidAnalysisDirect} 
                     onCancel={() => setShowPaymentModal(false)} 
@@ -915,7 +919,11 @@ function AnalyseBail({ userId }) {
                 <h2 className="fr-mb-2w">💳 Paiement sécurisé</h2>
                 <p className="fr-text--lg fr-mb-4w">Analyse complète : <strong>1.99€</strong></p>
                 
-                <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+                <Elements stripe={stripePromise} options={{ 
+                  clientSecret, 
+                  appearance: { theme: 'stripe' },
+                  paymentMethodTypes: ['card']
+                }}>
                   <CheckoutForm 
                     onSuccess={extractedText ? runPaidAnalysis : runPaidAnalysisDirect} 
                     onCancel={() => setShowPaymentModal(false)} 
@@ -1102,6 +1110,7 @@ function CheckoutForm({ onSuccess, onCancel }) {
       <PaymentElement 
         options={{ 
           layout: "tabs",
+          paymentMethodOrder: ['card'],
           fields: {
             billingDetails: {
               name: 'never',
@@ -1109,6 +1118,10 @@ function CheckoutForm({ onSuccess, onCancel }) {
               phone: 'never',
               address: 'never'
             }
+          },
+          wallets: {
+            applePay: 'never',
+            googlePay: 'never'
           }
         }} 
       />
