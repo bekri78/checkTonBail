@@ -587,10 +587,39 @@ app.post("/api/analyse-teaser", upload.single('file'), async (req, res) => {
 // 💰 Route ANALYSE PAYANTE avec texte déjà extrait (pas d'OCR)
 app.post("/api/analyse-bail-text", async (req, res) => {
   try {
-    const { bailText, fileName, userId } = req.body;
+    const { bailText, fileName, userId, paymentIntentId } = req.body;
     
     if (!bailText || bailText.length < 100) {
       return res.status(400).json({ error: "Texte du bail manquant ou trop court." });
+    }
+
+    // 🛡️ Vérifier le paiement Stripe
+    if (!paymentIntentId) {
+      return res.status(402).json({
+        success: false,
+        error: "Paiement requis",
+        needsPayment: true
+      });
+    }
+
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (paymentIntent.status !== 'succeeded') {
+        console.error(`❌ PaymentIntent ${paymentIntentId} non validé: ${paymentIntent.status}`);
+        return res.status(402).json({
+          success: false,
+          error: "Paiement non validé",
+          needsPayment: true
+        });
+      }
+      console.log(`✅ Paiement vérifié: ${paymentIntentId}`);
+    } catch (stripeErr) {
+      console.error(`❌ Erreur vérification Stripe:`, stripeErr.message);
+      return res.status(402).json({
+        success: false,
+        error: "Impossible de vérifier le paiement",
+        needsPayment: true
+      });
     }
 
     // 🛡️ Vérifier limite mensuelle
@@ -649,7 +678,7 @@ app.post("/api/analyse-bail", upload.single('file'), async (req, res) => {
     }
 
     const userId = req.body.userId || 'anonymous';
-    const skipCreditCheck = req.body.skipCreditCheck === 'true';
+    const paymentIntentId = req.body.paymentIntentId;
     
     // Créer l'utilisateur s'il n'existe pas
     if (userId !== 'anonymous') {
@@ -659,8 +688,30 @@ app.post("/api/analyse-bail", upload.single('file'), async (req, res) => {
       }
     }
     
-    // 🛡️ PROTECTION 2 : Vérifier les crédits utilisateur (sauf si paiement vient d'être fait)
-    if (!skipCreditCheck) {
+    // 🛡️ PROTECTION 2 : Vérifier le paiement Stripe si fourni, sinon vérifier les crédits
+    if (paymentIntentId) {
+      // Vérifier avec Stripe que le paiement est bien succeeded
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        if (paymentIntent.status !== 'succeeded') {
+          console.error(`❌ PaymentIntent ${paymentIntentId} non validé: ${paymentIntent.status}`);
+          return res.status(402).json({
+            success: false,
+            error: "Paiement non validé",
+            needsPayment: true
+          });
+        }
+        console.log(`✅ Paiement vérifié: ${paymentIntentId}`);
+      } catch (stripeErr) {
+        console.error(`❌ Erreur vérification Stripe:`, stripeErr.message);
+        return res.status(402).json({
+          success: false,
+          error: "Impossible de vérifier le paiement",
+          needsPayment: true
+        });
+      }
+    } else {
+      // Pas de paiement fourni, vérifier les crédits
       const hasCredit = await useCredit(userId);
       if (!hasCredit) {
         return res.status(402).json({
@@ -669,8 +720,6 @@ app.post("/api/analyse-bail", upload.single('file'), async (req, res) => {
           needsPayment: true
         });
       }
-    } else {
-      console.log("⏭️ Skip credit check (paiement direct)");
     }
 
     const fileName = req.file.originalname;

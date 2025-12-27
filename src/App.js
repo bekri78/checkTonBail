@@ -289,8 +289,8 @@ function AnalyseBail({ userId }) {
     }
   };
 
-  const runPaidAnalysis = async () => {
-    console.log("🚀 runPaidAnalysis appelé");
+  const runPaidAnalysis = async (paymentIntentId) => {
+    console.log("🚀 runPaidAnalysis appelé, paymentIntentId:", paymentIntentId);
     
     setShowPaymentModal(false);
     setClientSecret(null);
@@ -311,7 +311,8 @@ function AnalyseBail({ userId }) {
         body: JSON.stringify({
           bailText: extractedText,
           fileName: teaser?.fileName || file?.name || "bail.pdf",
-          userId
+          userId,
+          paymentIntentId
         })
       });
 
@@ -388,8 +389,8 @@ function AnalyseBail({ userId }) {
   };
 
   // Analyse payante directe (avec OCR car pas de teaser préalable)
-  const runPaidAnalysisDirect = async () => {
-    console.log("🚀 runPaidAnalysisDirect appelé (avec OCR)");
+  const runPaidAnalysisDirect = async (paymentIntentId) => {
+    console.log("🚀 runPaidAnalysisDirect appelé (avec OCR), paymentIntentId:", paymentIntentId);
     
     setShowPaymentModal(false);
     setClientSecret(null);
@@ -408,6 +409,7 @@ function AnalyseBail({ userId }) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('userId', userId);
+      formData.append('paymentIntentId', paymentIntentId);
 
       const res = await fetch(`${API_BASE}/api/analyse-bail`, {
         method: "POST",
@@ -1090,9 +1092,9 @@ function CheckoutForm({ onSuccess, onCancel }) {
         setPaymentError(error.message);
         setIsProcessing(false);
       } else if (paymentIntent && paymentIntent.status === "succeeded") {
-        console.log("✅ Paiement réussi !");
+        console.log("✅ Paiement réussi ! PaymentIntent:", paymentIntent.id);
         setIsProcessing(false);
-        onSuccess();
+        onSuccess(paymentIntent.id);
       } else {
         setPaymentError("Le paiement n'a pas pu être confirmé");
         setIsProcessing(false);
