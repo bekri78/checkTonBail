@@ -1082,6 +1082,16 @@ function CheckoutForm({ onSuccess, onCancel }) {
         elements,
         confirmParams: {
           return_url: window.location.href,
+          payment_method_data: {
+            billing_details: {
+              name: 'Client CheckTonBail',
+              email: 'client@checktonbail.fr',
+              phone: '',
+              address: {
+                country: 'FR'
+              }
+            }
+          }
         },
         redirect: "if_required"
       });
