@@ -5,12 +5,12 @@ import OpenAI from "openai";
 import Groq from "groq-sdk";
 import multer from "multer";
 import { createRequire } from "module";
-import Tesseract from "tesseract.js";
 import { pdfToPng } from "pdf-to-png-converter";
 import Stripe from "stripe";
 import { getCredits, addCredits, useCredit, createUser } from "./credits.js";
 import { canAnalyze, trackAnalysis, getMonthlyStats } from "./usage-tracker.js";
 import fs from "fs";
+import vision from "@google-cloud/vision";
 
 const require = createRequire(import.meta.url);
 const pdfParse = require("pdf-parse");
@@ -420,6 +420,11 @@ RÉPONDS UNIQUEMENT EN JSON STRICT. Aucun texte avant ou après.
   };
 }
 
+// Client Google Vision pour OCR ultra-rapide
+const visionClient = new vision.ImageAnnotatorClient({
+  apiKey: process.env.GOOGLE_VISION_API_KEY
+});
+
 // Fonction pour extraire le texte du PDF avec OCR si nécessaire
 async function extractTextFromPDF(buffer) {
   try {
@@ -431,35 +436,29 @@ async function extractTextFromPDF(buffer) {
       console.log(`✅ Texte natif extrait: ${text.length} caractères`);
       return text;
     } else {
-      // PDF scanné, utiliser OCR Tesseract
-      console.log("⚠️ PDF scanné détecté, conversion en images + OCR...");
+      // PDF scanné, utiliser Google Vision OCR (ultra-rapide !)
+      console.log("⚠️ PDF scanné détecté, conversion en images + Google Vision OCR...");
       
-      // Convertir PDF en images PNG (résolution optimisée 1.5x au lieu de 2x)
+      const startTime = Date.now();
+      
+      // Convertir PDF en images PNG
       const pngPages = await pdfToPng(buffer, {
         disableFontFace: false,
         useSystemFonts: false,
-        viewportScale: 1.5, // Réduit pour accélérer, qualité encore bonne
+        viewportScale: 2.0,
       });
       
-      console.log(`   ${pngPages.length} pages à traiter avec OCR en parallèle...`);
+      console.log(`   ${pngPages.length} pages à traiter avec Google Vision...`);
       
-      // OCR en PARALLÈLE sur toutes les pages (beaucoup plus rapide !)
-      const startTime = Date.now();
-      
+      // OCR en PARALLÈLE avec Google Vision (beaucoup plus rapide !)
       const ocrPromises = pngPages.map((page, i) => {
         console.log(`   🔄 Lancement OCR page ${i + 1}...`);
-        return Tesseract.recognize(
-          page.content,
-          'fra',
-          { 
-            logger: () => {},
-            // Optimisations Tesseract
-            tessedit_pageseg_mode: 1, // Auto avec OSD
-            preserve_interword_spaces: 1
-          }
-        ).then(result => {
-          console.log(`   ✓ Page ${i + 1} terminée`);
-          return { index: i, text: result.data.text };
+        return visionClient.textDetection({
+          image: { content: page.content.toString('base64') }
+        }).then(([result]) => {
+          const text = result.fullTextAnnotation?.text || '';
+          console.log(`   ✓ Page ${i + 1} terminée (${text.length} chars)`);
+          return { index: i, text };
         });
       });
       
@@ -472,7 +471,7 @@ async function extractTextFromPDF(buffer) {
       
       const ocrText = fullText.trim();
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`✅ OCR terminé en ${duration}s: ${ocrText.length} caractères extraits`);
+      console.log(`✅ Google Vision OCR terminé en ${duration}s: ${ocrText.length} caractères extraits`);
       
       if (ocrText.length < 100) {
         throw new Error("Impossible d'extraire suffisamment de texte du PDF");
