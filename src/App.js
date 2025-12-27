@@ -1086,8 +1086,11 @@ function CheckoutForm({ onSuccess, onCancel }) {
             billing_details: {
               name: 'Client CheckTonBail',
               email: 'client@checktonbail.fr',
-              phone: '',
+              phone: '0100000000',
               address: {
+                line1: '1 rue de Paris',
+                city: 'Paris',
+                postal_code: '75001',
                 country: 'FR'
               }
             }
