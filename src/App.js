@@ -1099,7 +1099,19 @@ function CheckoutForm({ onSuccess, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <PaymentElement options={{ layout: "tabs" }} />
+      <PaymentElement 
+        options={{ 
+          layout: "tabs",
+          fields: {
+            billingDetails: {
+              name: 'never',
+              email: 'never',
+              phone: 'never',
+              address: 'never'
+            }
+          }
+        }} 
+      />
       
       {paymentError && (
         <div className="fr-alert fr-alert--error fr-alert--sm fr-mt-2w">
