@@ -369,34 +369,45 @@ Si ce n'est PAS un bail d'habitation (ex: facture, CV, article, contrat de trava
   "message_erreur": "Ce document ne semble pas être un bail d'habitation. Nous avons détecté [type]. Veuillez uploader votre contrat de location."
 }
 
-Si c'est bien un bail d'habitation, analyse-le ATTENTIVEMENT et EXTRAIS les informations suivantes :
+Si c'est bien un bail d'habitation, analyse-le TRÈS ATTENTIVEMENT et EXTRAIS les informations suivantes :
 
 {
   "est_bail": true,
   "type_bail": "meublé ou vide (cherche 'meublé', 'non meublé', 'vide', 'logement meublé')",
   "adresse_bien": "CHERCHE l'adresse complète du logement (rue, numéro, code postal, ville)",
-  "loyer_mensuel": "CHERCHE le montant du loyer mensuel en euros (hors charges). Regarde 'loyer', 'montant mensuel', 'loyer de base', 'loyer mensuel hors charges'. Format: '850€' ou '850 euros'",
-  "depot_garantie": "CHERCHE le dépôt de garantie. Regarde 'dépôt de garantie', 'caution', 'garantie'. Format: '850€' ou '1 mois de loyer'",
+  "surface": "CHERCHE la surface en m² (m2, mètres carrés)",
+  "loyer_mensuel": "CHERCHE le montant du loyer mensuel en euros (hors charges). Regarde 'loyer', 'montant mensuel', 'loyer de base', 'loyer mensuel hors charges'. Format: '850€'",
+  "charges": "CHERCHE le montant des charges (provisions sur charges, charges forfaitaires). Format: '50€' ou 'Non précisé'",
+  "depot_garantie": "CHERCHE le dépôt de garantie. Regarde 'dépôt de garantie', 'caution', 'garantie', 'dépôt'. ATTENTION: cherche le MONTANT EXACT EN EUROS (40€, 700€, 1400€, etc.). Format: '700€' ou '1 mois de loyer'",
   "duree_bail": "CHERCHE la durée. Regarde 'durée du bail', 'durée de la location', '1 an', '3 ans', '9 mois'",
   "score_risque": "nombre de 1 à 10 (10 = très risqué)",
   "niveau_risque": "faible|modéré|élevé|critique",
   "nb_clauses_problematiques": "nombre entier",
   "nb_points_attention": "nombre entier",
-  "resume": "2-3 phrases résumant les risques principaux détectés, en donnant envie d'en savoir plus"
+  "resume": "2-3 phrases résumant le bail (type, surface, loyer, dépôt de garantie) ET les risques principaux détectés"
 }
 
 ⚠️ IMPORTANT - Recherche ACTIVE des informations :
 - Parcours TOUT le texte pour trouver les montants (€, euros, EUR)
 - Le loyer peut être écrit : "loyer mensuel de 850€", "850 euros par mois", "loyer : 850€"
-- Le dépôt peut être écrit : "dépôt de garantie : 850€", "caution d'un montant de...", "deux mois de loyer"
+- Le dépôt peut être écrit : "dépôt de garantie : 700€", "dépôt de 40 euros", "caution d'un montant de...", "deux mois de loyer", "garantie de 40€"
 - La durée peut être écrite : "pour une durée de 1 an", "bail de 3 ans", "9 mois (étudiant)"
-- NE METS PAS "Non précisé" si l'information est présente dans le texte !
+- NE METS PAS "Non précisé" si l'information est présente quelque part dans le texte !
+- Pour le dépôt de garantie, cherche TOUS les nombres près des mots "dépôt", "garantie", "caution"
 
 RÉPONDS UNIQUEMENT EN JSON STRICT. Aucun texte avant ou après.
 `.trim();
 
-  // Augmenter le texte pour mieux analyser (8000 caractères)
-  const limitedText = bailText.slice(0, 8000);
+  // Augmenter le texte pour mieux analyser (15000 caractères pour capturer plus d'infos)
+  const limitedText = bailText.slice(0, 15000);
+  
+  console.log(`📝 TEASER - Texte analysé: ${limitedText.length} caractères sur ${bailText.length} total`);
+  
+  // Debug: chercher le dépôt de garantie dans le texte
+  const depotMatch = bailText.match(/(?:dépôt|depot|garantie|caution)[^\d]*(\d+)/gi);
+  if (depotMatch) {
+    console.log(`   🔍 Mentions trouvées pour dépôt/garantie: ${depotMatch.join(', ')}`);
+  }
 
   const completion = await groq.chat.completions.create({
     model: "llama-3.1-8b-instant", // Modèle Groq rapide et GRATUIT
