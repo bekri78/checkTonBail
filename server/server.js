@@ -729,13 +729,11 @@ app.post("/api/create-payment-intent", async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: 199, // 1.99€ en centimes
       currency: 'eur',
+      payment_method_types: ['card'], // Uniquement carte bancaire, désactive Link
       metadata: {
         userId,
         product: 'bail_analysis'
-      },
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      }
     });
 
     res.json({ 

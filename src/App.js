@@ -725,8 +725,7 @@ function AnalyseBail({ userId }) {
                 
                 <Elements stripe={stripePromise} options={{ 
                   clientSecret, 
-                  appearance: { theme: 'stripe' },
-                  paymentMethodTypes: ['card']
+                  appearance: { theme: 'stripe' }
                 }}>
                   <CheckoutForm 
                     onSuccess={runPaidAnalysisDirect} 
@@ -921,8 +920,7 @@ function AnalyseBail({ userId }) {
                 
                 <Elements stripe={stripePromise} options={{ 
                   clientSecret, 
-                  appearance: { theme: 'stripe' },
-                  paymentMethodTypes: ['card']
+                  appearance: { theme: 'stripe' }
                 }}>
                   <CheckoutForm 
                     onSuccess={extractedText ? runPaidAnalysis : runPaidAnalysisDirect} 
@@ -1110,7 +1108,6 @@ function CheckoutForm({ onSuccess, onCancel }) {
       <PaymentElement 
         options={{ 
           layout: "tabs",
-          paymentMethodOrder: ['card'],
           fields: {
             billingDetails: {
               name: 'never',
@@ -1118,10 +1115,6 @@ function CheckoutForm({ onSuccess, onCancel }) {
               phone: 'never',
               address: 'never'
             }
-          },
-          wallets: {
-            applePay: 'never',
-            googlePay: 'never'
           }
         }} 
       />
