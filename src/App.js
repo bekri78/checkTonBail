@@ -514,29 +514,30 @@ function AnalyseBail({ userId }) {
         <div style={{
           backgroundColor: "#fff",
           borderRadius: "12px",
-          padding: "2rem",
-          maxWidth: "400px",
+          padding: "2.5rem 2rem",
+          maxWidth: "420px",
           width: "100%",
           textAlign: "center",
           boxShadow: "0 4px 20px rgba(0,0,145,0.1)",
           animation: "fadeIn 0.5s ease-in-out"
         }}>
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>
+          <div style={{ fontSize: "4rem", marginBottom: "1.5rem" }}>
             {currentSlide.emoji}
           </div>
           <div style={{ 
             fontSize: "2.5rem", 
             fontWeight: "bold", 
             color: "#000091",
-            marginBottom: "1.5rem"
+            marginBottom: "1rem"
           }}>
             {currentSlide.stat}
           </div>
           <p style={{ 
             color: "#666", 
-            fontSize: "1rem",
+            fontSize: "1.1rem",
             margin: 0,
-            lineHeight: "1.5"
+            lineHeight: "1.6",
+            padding: "0 1rem"
           }}>
             {currentSlide.text}
           </p>
@@ -606,8 +607,8 @@ function AnalyseBail({ userId }) {
             
             {file ? (
               <>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
-                <p className="fr-text--bold" style={{ color: '#18753C' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>✅</div>
+                <p className="fr-text--bold" style={{ color: '#18753C', marginBottom: '0.5rem' }}>
                   {file.name}
                 </p>
                 <p className="fr-text--sm" style={{ color: '#666' }}>
@@ -619,11 +620,11 @@ function AnalyseBail({ userId }) {
               </>
             ) : (
               <>
-                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📄</div>
-                <p className="fr-text--bold">
+                <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>📄</div>
+                <p className="fr-text--bold" style={{ marginBottom: '0.75rem' }}>
                   {isDragging ? 'Déposez votre fichier ici' : 'Glissez-déposez votre bail ici'}
                 </p>
-                <p className="fr-text--sm" style={{ color: '#666' }}>
+                <p className="fr-text--sm" style={{ color: '#666', marginBottom: '0.5rem' }}>
                   ou cliquez pour sélectionner un fichier
                 </p>
                 <p className="fr-text--xs" style={{ color: '#666', marginTop: '0.5rem' }}>
