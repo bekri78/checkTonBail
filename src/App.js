@@ -1081,20 +1081,7 @@ function CheckoutForm({ onSuccess, onCancel }) {
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: window.location.href,
-          payment_method_data: {
-            billing_details: {
-              name: 'Client CheckTonBail',
-              email: 'client@checktonbail.fr',
-              phone: '0100000000',
-              address: {
-                line1: '1 rue de Paris',
-                city: 'Paris',
-                postal_code: '75001',
-                country: 'FR'
-              }
-            }
-          }
+          return_url: window.location.href
         },
         redirect: "if_required"
       });
@@ -1120,15 +1107,8 @@ function CheckoutForm({ onSuccess, onCancel }) {
     <form onSubmit={handleSubmit}>
       <PaymentElement 
         options={{ 
-          layout: "tabs",
-          fields: {
-            billingDetails: {
-              name: 'never',
-              email: 'never',
-              phone: 'never',
-              address: 'never'
-            }
-          }
+          layout: "accordion",
+          defaultCollapsed: false
         }} 
       />
       
