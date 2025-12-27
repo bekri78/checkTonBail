@@ -1,0 +1,670 @@
+ import React, { useState } from "react";
+
+const API_BASE = "http://localhost:4000";
+
+function App() {
+  return (
+    <div style={styles.app}>
+      <main style={styles.main}>
+        <AnalyseBail />
+      </main>
+      <footer style={styles.footer}>
+        CheckTonBail © {new Date().getFullYear()}
+      </footer>
+    </div>
+  );
+}
+
+function AnalyseBail() {
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState("");
+  const [analysis, setAnalysis] = useState(null);
+  const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile && selectedFile.type === "application/pdf") {
+      setFile(selectedFile);
+      setAnalysis(null);
+      setError("");
+    } else {
+      setError("Merci de sélectionner un fichier PDF");
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.type === "application/pdf") {
+      setFile(droppedFile);
+      setAnalysis(null);
+      setError("");
+    } else {
+      setError("Merci de déposer un fichier PDF");
+    }
+  };
+
+function AnalyseBail() {
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState("");
+  const [analysis, setAnalysis] = useState(null);
+  const [error, setError] = useState("");
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0] || null);
+    setAnalysis(null);
+    setError("");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!file) {
+      setError("Merci de sélectionner un fichier de bail.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setAnalysis(null);
+
+    try {
+      // Envoyer le fichier directement au serveur pour extraction et analyse
+      console.log("📄 Envoi du fichier au serveur...");
+      setProgress("⏳ Extraction du texte et analyse en cours...");
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`${API_BASE}/api/analyse-bail`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Erreur lors de l'analyse");
+      }
+
+      setProgress("");
+      setAnalysis(data);
+    } catch (err) {
+      console.error(err);
+      setProgress("");
+      setError(err.message || "Erreur inconnue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      {!analysis ? (
+        <div style={styles.uploadSection}>
+          <div style={styles.hero}>
+            <h1 style={styles.title}>CheckTonBail</h1>
+            <p style={styles.subtitle}>
+              Analyse ton bail et détecte les clauses problématiques en quelques secondes
+            </p>
+          </div>
+
+          <div
+            style={{
+              ...styles.dropzone,
+              ...(isDragging ? styles.dropzoneActive : {}),
+              ...(file ? styles.dropzoneHasFile : {}),
+            }}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById("fileInput").click()}
+          >
+            {!file ? (
+              <>
+                <svg style={styles.uploadIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <p style={styles.dropzoneText}>
+                  Glisse ton bail ici ou clique pour choisir
+                </p>
+                <p style={styles.dropzoneHint}>PDF uniquement</p>
+              </>
+            ) : (
+              <>
+                <svg style={styles.fileIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p style={styles.fileName}>{file.name}</p>
+                <p style={styles.fileSize}>{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              </>
+            )}
+          </div>
+
+          <input
+            id="fileInput"
+            type="file"
+            accept=".pdf"
+            onChange={handleFileChange}
+            style={styles.hiddenInput}
+          />
+
+          {error && <p style={styles.error}>{error}</p>}
+          {progress && <p style={styles.progress}>{progress}</p>}
+
+          {file && !loading && (
+            <button onClick={handleSubmit} style={styles.analyzeBtn}>
+              Analyser mon bail
+            </button>
+          )}
+
+          {loading && (
+            <div style={styles.loader}>
+              <div style={styles.spinner}></div>
+              <p style={styles.loadingText}>Analyse en cours...</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={styles.resultsSection}>
+          <button onClick={() => { setAnalysis(null); setFile(null); }} style={styles.backBtn}>
+            ← Analyser un autre bail
+          </button>
+
+      {analysis && (
+        <div style={styles.result}>
+          <h3>Résultat pour : {analysis.fileName}</h3>
+
+          {renderSection(
+            "Clauses illégales",
+            analysis.analysis.clauses_illegales,
+            (item, i) => (
+              <div key={i} style={styles.item}>
+                <p><strong>Extrait :</strong> {item.extrait}</p>
+                <p><strong>Explication :</strong> {item.explication}</p>
+                <p><strong>Référence :</strong> {item.reference_legale}</p>
+                <p><strong>Niveau de risque :</strong> {item.niveau_risque}</p>
+              </div>
+            )
+          )}
+
+          {renderSection(
+            "Clauses abusives",
+            analysis.analysis.clauses_abusives,
+            (item, i) => (
+              <div key={i} style={styles.item}>
+                <p><strong>Extrait :</strong> {item.extrait}</p>
+                <p><strong>Explication :</strong> {item.explication}</p>
+                <p><strong>Conseil :</strong> {item.conseil_locataire}</p>
+              </div>
+            )
+          )}
+
+          {renderSection(
+            "Points à surveiller",
+            analysis.analysis.points_a_surveiller,
+            (item, i) => (
+              <div key={i} style={styles.item}>
+                <p><strong>Extrait :</strong> {item.extrait}</p>
+                <p><strong>Explication :</strong> {item.explication}</p>
+                <p><strong>Recommandation :</strong> {item.recommandation}</p>
+              </div>
+            )
+          )}
+
+          {renderSection(
+            "Éléments favorables au locataire",
+            analysis.analysis.elements_favorables_locataire,
+            (item, i) => (
+              <div key={i} style={styles.item}>
+                <p><strong>Extrait :</strong> {item.extrait}</p>
+                <p><strong>Pourquoi :</strong> {item.pourquoi_c_est_favorable}</p>
+              </div>
+            )
+          )}
+
+          <div style={styles.subSection}>
+            <h4>Impact sur la caution</h4>
+            <p>
+              <strong>Risque :</strong>{" "}
+              {analysis.analysis.impact_sur_caution.risque_perte_caution}
+            </p>
+            <p>
+              <strong>Explication :</strong>{" "}
+              {analysis.analysis.impact_sur_caution.explication}
+            </p>
+            <ul>
+              {analysis.analysis.impact_sur_caution
+                .actions_concretes_pour_proteger_la_caution
+                .map((a, i) => (
+                  <li key={i}>{a}</li>
+                ))}
+            </ul>
+          </div>
+
+          <div style={styles.subSection}>
+            <h4>Recommandations générales</h4>
+            <ul>
+              {analysis.analysis.recommandations_generales.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div style={styles.subSection}>
+            <h4>Résumé simple</h4>
+            <p>{analysis.analysis.resume_simple}</p>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function renderSection(title, arr, renderItem) {
+  if (!arr || arr.length === 0) return null;
+  return (
+    <div style={styles.subSection}>
+      <h4>{title}</h4>
+      {arr.map(renderItem)}
+    </div>
+  );
+}
+
+ function CautionHelper() {
+  const [form, setForm] = useState({
+    nomLocataire: "",
+    adresseLocataire: "",
+    nomProprietaire: "",
+    adresseLogement: "",
+    dateEntree: "",
+    dateSortie: "",
+    montantDepot: "",
+  });
+  const [lettre, setLettre] = useState("");
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const generateLetter = (e) => {
+    e.preventDefault();
+    const {
+      nomLocataire,
+      adresseLocataire,
+      nomProprietaire,
+      adresseLogement,
+      dateEntree,
+      dateSortie,
+      montantDepot,
+    } = form;
+
+    const today = new Date().toLocaleDateString("fr-FR");
+
+    const text = `
+${nomLocataire}
+${adresseLocataire}
+
+À
+${nomProprietaire}
+
+Fait à ____________, le ${today}
+
+Objet : Demande de restitution du dépôt de garantie
+
+Madame, Monsieur,
+
+Je suis ancien locataire du logement situé ${adresseLogement}, occupé à compter du ${dateEntree} et libéré le ${dateSortie}.
+
+Conformément à l'article 22 de la loi n°89-462 du 6 juillet 1989, je vous rappelle que le délai légal de restitution du dépôt de garantie, d'un montant de ${montantDepot} €, est d'un mois à compter de la remise des clés lorsque l'état des lieux de sortie est conforme à l'état des lieux d'entrée, ou de deux mois en cas de différences dûment justifiées.
+
+À ce jour, ce délai est arrivé à échéance (ou va bientôt l’être) et je n'ai pas reçu la restitution de ce dépôt, ni le détail précis et justifié d'éventuelles retenues.
+
+Je vous remercie en conséquence de bien vouloir procéder à la restitution de la somme de ${montantDepot} € dans les plus brefs délais, par virement ou tout autre moyen à votre convenance, et de me transmettre le cas échéant le décompte détaillé des retenues opérées, accompagné des justificatifs.
+
+Sans réponse de votre part, je me verrai contraint d'envisager les démarches nécessaires pour faire valoir mes droits (mise en demeure, saisine d'un conciliateur de justice, puis du tribunal compétent si nécessaire).
+
+Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.
+
+${nomLocataire}
+    `.trim();
+
+    setLettre(text);
+  };
+
+  const copyToClipboard = () => {
+    if (!lettre) return;
+    navigator.clipboard.writeText(lettre);
+  };
+
+  return (
+    <section style={styles.card}>
+      <h2>Récupérer ma caution</h2>
+      <p style={{ marginTop: 4, marginBottom: 16, fontSize: "0.9rem", color: "#9ca3af" }}>
+        Ici tu as une méthode claire pour sécuriser ton dépôt de garantie : quoi faire
+        avant de partir, le jour de l’état des lieux, après la remise des clés, et
+        une lettre prête à envoyer si le bailleur ne restitue pas la somme dans les délais.
+      </p>
+
+      {/* 1. Étapes clés */}
+      <div style={styles.subSection}>
+        <h3>1. Avant l’état des lieux de sortie</h3>
+        <ul style={styles.list}>
+          <li>Faire un ménage sérieux (sols, sanitaires, cuisine, vitres principales).</li>
+          <li>Remplacer les ampoules grillées, resserrer les poignées, revisser ce qui branle.</li>
+          <li>Refaire les joints de silicone moisis (douche, baignoire, évier) si nécessaire.</li>
+          <li>Réparer les petits dégâts dont tu es clairement responsable (trous énormes, casse évidente).</li>
+          <li>Prendre des <strong>photos datées</strong> de chaque pièce, murs, sols, plafonds, cuisine, salle de bain, WC.</li>
+          <li>Rassembler les justificatifs d’entretien (chaudière, entretien annuel, etc. si à ta charge).</li>
+        </ul>
+      </div>
+
+      <div style={styles.subSection}>
+        <h3>2. Le jour de l’état des lieux</h3>
+        <ul style={styles.list}>
+          <li>Exiger un état des lieux <strong>contradictoire</strong> et détaillé (pas juste “RAS”).</li>
+          <li>Comparer avec l’état des lieux d’entrée point par point.</li>
+          <li>Refuser de signer si tu n’es pas d’accord avec des mentions manifestement exagérées.</li>
+          <li>Ajouter toi-même tes remarques à la main avant de signer, si nécessaire.</li>
+          <li>Demander un exemplaire signé immédiatement (ou photo du document signé).</li>
+        </ul>
+      </div>
+
+      <div style={styles.subSection}>
+        <h3>3. Après la remise des clés</h3>
+        <ul style={styles.list}>
+          <li>Noter la date exacte de remise des clés (c’est le point de départ du délai légal).</li>
+          <li>Délai normal : 
+            <ul style={styles.listInner}>
+              <li>1 mois si l’état des lieux de sortie = conforme à l’entrée.</li>
+              <li>2 mois s’il y a des dégradations justifiées.</li>
+            </ul>
+          </li>
+          <li>Si le bailleur veut faire des retenues : il doit les justifier (devis, factures, justificatifs écrits).</li>
+          <li>Sans nouvelles ou retenues abusives : envoyer une lettre de demande de restitution en recommandé avec AR.</li>
+        </ul>
+      </div>
+
+      {/* 2. Rappel rapide sur qui paie quoi */}
+      <div style={styles.subSection}>
+        <h3>4. Qui doit payer quoi ?</h3>
+        <div style={styles.item}>
+          <p><strong>En principe à la charge du locataire (entretien courant) :</strong></p>
+          <ul style={styles.listInner}>
+            <li>Ménage normal, petites réparations d’usage.</li>
+            <li>Remplacement ampoules, fusibles, piles de télécommande.</li>
+            <li>Détartrage robinetterie, pommeau de douche, entretien simple joints.</li>
+            <li>Entretien chaudière si le bail le prévoit et que c’est légalement ton rôle.</li>
+          </ul>
+        </div>
+        <div style={styles.item}>
+          <p><strong>En principe à la charge du bailleur (gros entretien / vétusté) :</strong></p>
+          <ul style={styles.listInner}>
+            <li>Réparations structurelles (toiture, murs, planchers, infiltrations, etc.).</li>
+            <li>Remplacement équipements vétustes (chauffage, électroménager fourni, etc.).</li>
+            <li>Problèmes d’humidité structurelle, isolation, fuites importantes.</li>
+            <li>Mise en conformité si le logement n’est pas décent (électricité dangereuse, pas d’eau, etc.).</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* 3. Générateur de lettre */}
+      <div style={styles.subSection}>
+        <h3>5. Générer la lettre de demande de restitution</h3>
+        <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+          Tu complètes les champs, tu récupères une lettre prête à être envoyée en recommandé avec AR.
+        </p>
+
+        <form onSubmit={generateLetter} style={styles.form}>
+          <input
+            style={styles.input}
+            name="nomLocataire"
+            placeholder="Nom et prénom du locataire"
+            value={form.nomLocataire}
+            onChange={handleChange}
+            required
+          />
+          <input
+            style={styles.input}
+            name="adresseLocataire"
+            placeholder="Adresse complète du locataire"
+            value={form.adresseLocataire}
+            onChange={handleChange}
+            required
+          />
+          <input
+            style={styles.input}
+            name="nomProprietaire"
+            placeholder="Nom / Société du propriétaire"
+            value={form.nomProprietaire}
+            onChange={handleChange}
+            required
+          />
+          <input
+            style={styles.input}
+            name="adresseLogement"
+            placeholder="Adresse du logement loué"
+            value={form.adresseLogement}
+            onChange={handleChange}
+            required
+          />
+          <input
+            style={styles.input}
+            name="dateEntree"
+            placeholder="Date d'entrée (JJ/MM/AAAA)"
+            value={form.dateEntree}
+            onChange={handleChange}
+            required
+          />
+          <input
+            style={styles.input}
+            name="dateSortie"
+            placeholder="Date de sortie (JJ/MM/AAAA)"
+            value={form.dateSortie}
+            onChange={handleChange}
+            required
+          />
+          <input
+            style={styles.input}
+            name="montantDepot"
+            placeholder="Montant du dépôt de garantie (€)"
+            value={form.montantDepot}
+            onChange={handleChange}
+            required
+          />
+
+          <button type="submit" style={styles.primaryBtn}>
+            Générer la lettre
+          </button>
+        </form>
+      </div>
+
+      {lettre && (
+        <div style={styles.result}>
+          <h3>Lettre générée</h3>
+          <p style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+            Copie/colle ce texte dans ton traitement de texte, vérifie les infos, puis imprime et envoie en recommandé avec AR.
+          </p>
+          <textarea
+            style={styles.textarea}
+            rows={18}
+            value={lettre}
+            readOnly
+          />
+          <button style={styles.secondaryBtn} onClick={copyToClipboard}>
+            Copier dans le presse-papiers
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+
+// Styles très simples inline
+const styles = {
+  app: {
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+    backgroundColor: "#0f172a",
+    color: "#e5e7eb",
+  },
+  header: {
+    padding: "12px 24px",
+    borderBottom: "1px solid #1f2937",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#020617",
+  },
+  logo: {
+    fontWeight: "bold",
+    fontSize: "1.2rem",
+  },
+  nav: {
+    display: "flex",
+    gap: "8px",
+  },
+  navBtn: {
+    background: "transparent",
+    border: "1px solid #374151",
+    borderRadius: "999px",
+    padding: "6px 12px",
+    color: "#e5e7eb",
+    cursor: "pointer",
+    fontSize: "0.9rem",
+  },
+  navBtnActive: {
+    background: "#4f46e5",
+    border: "1px solid #4f46e5",
+    borderRadius: "999px",
+    padding: "6px 12px",
+    color: "#e5e7eb",
+    cursor: "pointer",
+    fontSize: "0.9rem",
+  },
+  main: {
+    flex: 1,
+    maxWidth: "960px",
+    width: "100%",
+    margin: "24px auto",
+    padding: "0 16px",
+  },
+  card: {
+    backgroundColor: "#020617",
+    borderRadius: "16px",
+    padding: "20px",
+    border: "1px solid #1f2937",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    marginTop: "12px",
+  },
+  label: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    fontSize: "0.9rem",
+  },
+  input: {
+    padding: "8px 10px",
+    borderRadius: "8px",
+    border: "1px solid #374151",
+    backgroundColor: "#020617",
+    color: "#e5e7eb",
+  },
+  primaryBtn: {
+    marginTop: "8px",
+    padding: "10px 16px",
+    borderRadius: "999px",
+    border: "none",
+    backgroundColor: "#4f46e5",
+    color: "#e5e7eb",
+    cursor: "pointer",
+    fontWeight: "500",
+  },
+  secondaryBtn: {
+    marginTop: "8px",
+    padding: "8px 14px",
+    borderRadius: "999px",
+    border: "1px solid #4b5563",
+    backgroundColor: "transparent",
+    color: "#e5e7eb",
+    cursor: "pointer",
+    fontSize: "0.9rem",
+  },
+  error: {
+    marginTop: "8px",
+    color: "#fca5a5",
+  },
+  info: {
+    marginTop: "8px",
+    color: "#86efac",
+    fontStyle: "italic",
+  },
+  result: {
+    marginTop: "16px",
+    borderTop: "1px solid #1f2937",
+    paddingTop: "12px",
+    fontSize: "0.9rem",
+  },
+  item: {
+    marginBottom: "10px",
+    padding: "8px 10px",
+    borderRadius: "8px",
+    backgroundColor: "#020617",
+    border: "1px solid #111827",
+  },
+  subSection: {
+    marginTop: "12px",
+  },
+  textarea: {
+    width: "100%",
+    marginTop: "8px",
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #374151",
+    backgroundColor: "#020617",
+    color: "#e5e7eb",
+    fontFamily: "monospace",
+    fontSize: "0.85rem",
+  },
+  footer: {
+    padding: "12px 24px",
+    borderTop: "1px solid #1f2937",
+    fontSize: "0.8rem",
+    textAlign: "center",
+    color: "#9ca3af",
+  },
+  list: {
+    marginTop: 8,
+    paddingLeft: 18,
+    fontSize: "0.85rem",
+    color: "#d1d5db",
+  },
+  listInner: {
+    marginTop: 4,
+    paddingLeft: 18,
+    fontSize: "0.8rem",
+    color: "#9ca3af",
+  },
+};
+
+export default App;

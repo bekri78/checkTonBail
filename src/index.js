@@ -1,5 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+
+// Import DSFR (Design Système de l'État Français)
+import '@gouvfr/dsfr/dist/dsfr.min.css';
+import '@gouvfr/dsfr/dist/utility/icons/icons.min.css';
+
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';

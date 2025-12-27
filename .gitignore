@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+server/node_modules
 /.pnp
 .pnp.js
 
@@ -13,10 +14,21 @@
 
 # misc
 .DS_Store
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Google Cloud credentials
+service-account.json
+server/service-account.json
+server/.env
+
+# Données utilisateurs (sensibles)
+server/users.json
+server/usage.json
+server/rate-limits.json
 
 npm-debug.log*
 yarn-debug.log*
