@@ -523,14 +523,14 @@ function AnalyseBail({ userId }) {
           boxShadow: "0 4px 20px rgba(0,0,145,0.1)",
           animation: "fadeIn 0.5s ease-in-out"
         }}>
-          <div style={{ fontSize: "4rem", marginBottom: "1.5rem" }}>
+          <div style={{ fontSize: "4rem", marginBottom: "2rem" }}>
             {currentSlide.emoji}
           </div>
           <div style={{ 
             fontSize: "2.5rem", 
             fontWeight: "bold", 
             color: "#000091",
-            marginBottom: "1rem"
+            marginBottom: "1.5rem"
           }}>
             {currentSlide.stat}
           </div>
