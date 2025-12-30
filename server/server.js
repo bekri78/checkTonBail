@@ -37,7 +37,19 @@ app.use(cors({
 app.use(express.json());
 
 // ==========================================
-// 🚦 RATE LIMITING - Teasers gratuits par IP
+// � SECURITY HEADERS
+// ==========================================
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+// ==========================================
+// �🚦 RATE LIMITING - Teasers gratuits par IP
 // ==========================================
 const RATE_LIMIT_FILE = "./rate-limits.json";
 const MAX_FREE_TEASERS_PER_DAY = 3; // Limite par IP par jour
