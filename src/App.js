@@ -1258,53 +1258,46 @@ function FAQ() {
           Tout ce que vous devez savoir sur CheckTonBail et l'analyse de votre bail locatif.
         </p>
         
-        <div className="fr-accordions-group">
+        <div>
           {faqItems.map((item, index) => (
-            <section key={index} className="fr-accordion">
-              <h3 className="fr-accordion__title">
-                <button
-                  className="fr-accordion__btn"
-                  aria-expanded={openIndex === index}
-                  aria-controls={`accordion-${index}`}
-                  onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '1rem',
-                    background: openIndex === index ? '#f5f5fe' : '#fff',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    marginBottom: '8px',
-                    cursor: 'pointer',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  {item.question}
-                  <span style={{ marginLeft: '1rem' }}>{openIndex === index ? '−' : '+'}</span>
-                </button>
-              </h3>
+            <div key={index} style={{ marginBottom: '12px' }}>
+              <button
+                onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '16px 20px',
+                  background: openIndex === index ? '#000091' : '#fff',
+                  color: openIndex === index ? '#fff' : '#000',
+                  border: '1px solid #ddd',
+                  borderRadius: openIndex === index ? '8px 8px 0 0' : '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>{item.question}</span>
+                <span style={{ fontSize: '20px' }}>{openIndex === index ? '−' : '+'}</span>
+              </button>
               {openIndex === index && (
                 <div 
-                  className="fr-collapse" 
-                  id={`accordion-${index}`}
                   style={{
-                    padding: '1rem',
-                    background: '#f9f9f9',
-                    borderRadius: '0 0 4px 4px',
-                    marginTop: '-8px',
-                    marginBottom: '8px',
+                    padding: '20px',
+                    background: '#f6f6f6',
+                    borderRadius: '0 0 8px 8px',
                     border: '1px solid #ddd',
-                    borderTop: 'none'
+                    borderTop: 'none',
+                    lineHeight: 1.7,
+                    color: '#333'
                   }}
                 >
-                  <p style={{ margin: 0, lineHeight: 1.6 }}>{item.answer}</p>
+                  {item.answer}
                 </div>
               )}
-            </section>
+            </div>
           ))}
         </div>
 
