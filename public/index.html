@@ -36,6 +36,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000091" />
     
+    <!-- CSS Critique inline pour améliorer FCP/LCP -->
+    <style>
+      body{margin:0;font-family:Marianne,arial,sans-serif;background:#f6f6f6}
+      .fr-header{background:#fff;box-shadow:0 8px 8px 0 rgba(0,0,0,.1)}
+      .fr-container{max-width:1200px;margin:0 auto;padding:0 1rem}
+      .fr-header__body{padding:1rem 0}
+      #root{min-height:100vh}
+      .loading-placeholder{display:flex;justify-content:center;align-items:center;min-height:50vh;color:#000091}
+    </style>
+    
     <!-- DNS Prefetch & Preconnect pour performances -->
     <link rel="dns-prefetch" href="https://checktonbail.onrender.com" />
     <link rel="preconnect" href="https://checktonbail.onrender.com" crossorigin />

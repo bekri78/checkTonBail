@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense, memo } from "react";
+import React, { useState, useEffect, lazy, Suspense, memo, useCallback } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import "./App.css";
@@ -6,8 +6,14 @@ import "./App.css";
 // En production: REACT_APP_API_BASE=https://ton-backend.railway.app
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:4000";
 
-// Clé publique Stripe - Chargement lazy pour ne pas bloquer le rendu initial
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY || "pk_test_S453tNJo0VGUC7Y6qNVxldgX00vo9ixxkp");
+// Clé publique Stripe - Chargement différé pour améliorer le LCP
+let stripePromise = null;
+const getStripe = () => {
+  if (!stripePromise) {
+    stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY || "pk_test_S453tNJo0VGUC7Y6qNVxldgX00vo9ixxkp");
+  }
+  return stripePromise;
+};
 
 function App() {
   const [currentPage, setCurrentPage] = useState("analyse");
@@ -735,7 +741,7 @@ function AnalyseBail({ userId }) {
                 <h2 className="fr-mb-2w">💳 Paiement sécurisé</h2>
                 <p className="fr-text--lg fr-mb-4w">Analyse complète : <strong>1.99€</strong></p>
                 
-                <Elements stripe={stripePromise} options={{ 
+                <Elements stripe={getStripe()} options={{ 
                   clientSecret, 
                   appearance: { theme: 'stripe' }
                 }}>
@@ -930,7 +936,7 @@ function AnalyseBail({ userId }) {
                 <h2 className="fr-mb-2w">💳 Paiement sécurisé</h2>
                 <p className="fr-text--lg fr-mb-4w">Analyse complète : <strong>1.99€</strong></p>
                 
-                <Elements stripe={stripePromise} options={{ 
+                <Elements stripe={getStripe()} options={{ 
                   clientSecret, 
                   appearance: { theme: 'stripe' }
                 }}>
