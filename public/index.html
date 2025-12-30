@@ -2,35 +2,79 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
+    
+    <!-- SEO Meta Tags -->
+    <title>CheckTonBail - Analysez votre bail locatif et détectez les clauses abusives | IA</title>
+    <meta name="description" content="Analysez votre contrat de location en 30 secondes grâce à l'IA. Détectez les clauses abusives, protégez votre dépôt de garantie et connaissez vos droits de locataire. Service français conforme à la loi ALUR." />
+    <meta name="keywords" content="analyse bail, clause abusive bail, contrat location, dépôt de garantie, droits locataire, loi ALUR, bail meublé, bail vide, vérifier bail, caution locative" />
+    <meta name="author" content="CheckTonBail" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://www.check-ton-bail.fr/" />
+    
+    <!-- Open Graph (Facebook, LinkedIn) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.check-ton-bail.fr/" />
+    <meta property="og:title" content="CheckTonBail - Analysez votre bail et détectez les clauses abusives" />
+    <meta property="og:description" content="Analysez votre contrat de location en 30 secondes grâce à l'IA. Détectez les clauses abusives et protégez votre dépôt de garantie." />
+    <meta property="og:image" content="https://www.check-ton-bail.fr/og-image.png" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:site_name" content="CheckTonBail" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="CheckTonBail - Analysez votre bail locatif" />
+    <meta name="twitter:description" content="Détectez les clauses abusives de votre bail en 30 secondes grâce à l'IA." />
+    <meta name="twitter:image" content="https://www.check-ton-bail.fr/og-image.png" />
+    
+    <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
+    
+    <!-- Mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000091" />
-    <meta
-      name="description"
-      content="CheckTonBail - Analysez votre bail et détectez les clauses abusives grâce à l'intelligence artificielle"
-    />
+    
     <!-- Police Marianne (DSFR) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Marianne:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>CheckTonBail - Analyse de bail locatif</title>
+    
+    <!-- Structured Data (JSON-LD) pour Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "CheckTonBail",
+      "url": "https://www.check-ton-bail.fr",
+      "description": "Analysez votre bail locatif et détectez les clauses abusives grâce à l'intelligence artificielle",
+      "applicationCategory": "LegalService",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "1.99",
+        "priceCurrency": "EUR",
+        "description": "Analyse complète de bail"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "CheckTonBail"
+      },
+      "inLanguage": "fr-FR",
+      "isAccessibleForFree": false,
+      "featureList": [
+        "Analyse automatique de bail",
+        "Détection de clauses abusives",
+        "Vérification conformité loi ALUR",
+        "Protection dépôt de garantie"
+      ]
+    }
+    </script>
   </head>
   <body>
     <noscript>Vous devez activer JavaScript pour utiliser cette application.</noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>
