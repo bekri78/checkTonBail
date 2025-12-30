@@ -123,21 +123,39 @@
     }
     </script>
     
-    <!-- LocalBusiness Schema -->
+    <!-- Service Schema (service en ligne, pas d'adresse physique requise) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "LegalService",
-      "name": "CheckTonBail",
-      "description": "Service d'analyse automatique de baux locatifs par intelligence artificielle",
+      "@type": "Service",
+      "name": "CheckTonBail - Analyse de bail par IA",
+      "description": "Service d'analyse automatique de baux locatifs par intelligence artificielle. Détection de clauses abusives et vérification de conformité loi ALUR.",
       "url": "https://www.check-ton-bail.fr",
       "logo": "https://www.check-ton-bail.fr/logo-checktonbail.svg",
-      "priceRange": "€",
+      "provider": {
+        "@type": "Organization",
+        "name": "CheckTonBail",
+        "url": "https://www.check-ton-bail.fr",
+        "email": "checkTonBail@outlook.com"
+      },
       "areaServed": {
         "@type": "Country",
         "name": "France"
       },
-      "serviceType": ["Analyse de bail", "Détection clauses abusives", "Conseil juridique locatif"]
+      "serviceType": "Analyse juridique de bail locatif",
+      "category": "Service juridique en ligne",
+      "availableChannel": {
+        "@type": "ServiceChannel",
+        "serviceUrl": "https://www.check-ton-bail.fr",
+        "availableLanguage": "French"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "1.99",
+        "priceCurrency": "EUR",
+        "availability": "https://schema.org/InStock"
+      },
+      "termsOfService": "https://www.check-ton-bail.fr/#cgv"
     }
     </script>
   </head>
