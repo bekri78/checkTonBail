@@ -1,0 +1,23 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond bleu marine -->
+  <rect width="1200" height="630" fill="#000091"/>
+  
+  <!-- Bande décorative -->
+  <rect x="0" y="580" width="1200" height="50" fill="#e1000f"/>
+  
+  <!-- Icône maison -->
+  <text x="600" y="180" font-size="120" text-anchor="middle" fill="white">🏠</text>
+  
+  <!-- Titre principal -->
+  <text x="600" y="300" font-family="Arial, sans-serif" font-size="72" font-weight="bold" text-anchor="middle" fill="white">CheckTonBail</text>
+  
+  <!-- Sous-titre -->
+  <text x="600" y="380" font-family="Arial, sans-serif" font-size="36" text-anchor="middle" fill="#f5f5fe">Analysez votre bail en 30 secondes</text>
+  
+  <!-- Accroche -->
+  <rect x="300" y="420" width="600" height="60" rx="30" fill="#e1000f"/>
+  <text x="600" y="462" font-family="Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="white">Détectez les clauses abusives grâce à l'IA</text>
+  
+  <!-- URL -->
+  <text x="600" y="550" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="#f5f5fe">www.check-ton-bail.fr</text>
+</svg>
