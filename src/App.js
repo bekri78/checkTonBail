@@ -15,6 +15,142 @@ const getStripe = () => {
   return stripePromise;
 };
 
+// ==========================================
+// 🍪 BANNIÈRE COOKIES RGPD
+// ==========================================
+function CookieBanner() {
+  const [showBanner, setShowBanner] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
+  useEffect(() => {
+    const consent = localStorage.getItem("cookie_consent");
+    if (!consent) {
+      setShowBanner(true);
+    }
+  }, []);
+
+  const acceptAll = () => {
+    localStorage.setItem("cookie_consent", "all");
+    localStorage.setItem("cookie_consent_date", new Date().toISOString());
+    setShowBanner(false);
+    // Activer Google Analytics
+    if (window.gtag) {
+      window.gtag('consent', 'update', {
+        'analytics_storage': 'granted'
+      });
+    }
+  };
+
+  const acceptEssential = () => {
+    localStorage.setItem("cookie_consent", "essential");
+    localStorage.setItem("cookie_consent_date", new Date().toISOString());
+    setShowBanner(false);
+    // Désactiver Google Analytics
+    if (window.gtag) {
+      window.gtag('consent', 'update', {
+        'analytics_storage': 'denied'
+      });
+    }
+  };
+
+  if (!showBanner) return null;
+
+  return (
+    <div style={{
+      position: "fixed",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      background: "#fff",
+      borderTop: "3px solid #000091",
+      padding: "20px",
+      boxShadow: "0 -4px 20px rgba(0,0,0,0.15)",
+      zIndex: 10000
+    }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "20px", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: "300px" }}>
+            <h3 style={{ margin: "0 0 10px 0", color: "#000091" }}>🍪 Gestion des cookies</h3>
+            <p style={{ margin: "0 0 10px 0", fontSize: "14px", color: "#333" }}>
+              Nous utilisons des cookies pour améliorer votre expérience et analyser le trafic de notre site. 
+              Vous pouvez accepter tous les cookies ou uniquement les cookies essentiels au fonctionnement du site.
+            </p>
+            
+            {showDetails && (
+              <div style={{ 
+                background: "#f6f6f6", 
+                padding: "15px", 
+                borderRadius: "8px", 
+                marginBottom: "10px",
+                fontSize: "13px"
+              }}>
+                <p style={{ margin: "0 0 10px 0" }}><strong>Cookies essentiels</strong> (toujours actifs)</p>
+                <ul style={{ margin: "0 0 15px 20px", padding: 0 }}>
+                  <li>Mémorisation de vos préférences de cookies</li>
+                  <li>Fonctionnement du paiement Stripe</li>
+                  <li>Identifiant de session anonyme</li>
+                </ul>
+                <p style={{ margin: "0 0 10px 0" }}><strong>Cookies analytiques</strong> (optionnels)</p>
+                <ul style={{ margin: "0 0 0 20px", padding: 0 }}>
+                  <li>Google Analytics : mesure d'audience anonyme</li>
+                </ul>
+              </div>
+            )}
+            
+            <button 
+              onClick={() => setShowDetails(!showDetails)}
+              style={{ 
+                background: "none", 
+                border: "none", 
+                color: "#000091", 
+                textDecoration: "underline",
+                cursor: "pointer",
+                padding: 0,
+                fontSize: "13px"
+              }}
+            >
+              {showDetails ? "Masquer les détails" : "En savoir plus"}
+            </button>
+          </div>
+          
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              onClick={acceptEssential}
+              style={{
+                padding: "12px 24px",
+                background: "#fff",
+                color: "#000091",
+                border: "1px solid #000091",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: "500",
+                fontSize: "14px"
+              }}
+            >
+              Cookies essentiels uniquement
+            </button>
+            <button
+              onClick={acceptAll}
+              style={{
+                padding: "12px 24px",
+                background: "#000091",
+                color: "#fff",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: "500",
+                fontSize: "14px"
+              }}
+            >
+              Accepter tout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState("analyse");
   const [userId, setUserId] = useState(null);
@@ -1504,4 +1640,14 @@ function PolitiqueConfidentialite() {
   );
 }
 
-export default App;
+// Composant principal avec CookieBanner
+function AppWithCookies() {
+  return (
+    <>
+      <App />
+      <CookieBanner />
+    </>
+  );
+}
+
+export default AppWithCookies;

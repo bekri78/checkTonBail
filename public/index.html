@@ -3,13 +3,27 @@
   <head>
     <meta charset="utf-8" />
     
-    <!-- Google Analytics -->
+    <!-- Google Analytics avec Consent Mode RGPD -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-WVS3XVBKVM"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
+      
+      // Consent Mode: désactivé par défaut (RGPD)
+      gtag('consent', 'default', {
+        'analytics_storage': 'denied',
+        'ad_storage': 'denied'
+      });
+      
+      // Vérifier si l'utilisateur a déjà accepté
+      if (localStorage.getItem('cookie_consent') === 'all') {
+        gtag('consent', 'update', {
+          'analytics_storage': 'granted'
+        });
+      }
+      
       gtag('js', new Date());
-      gtag('config', 'G-WVS3XVBKVM');
+      gtag('config', 'G-WVS3XVBKVM', { 'anonymize_ip': true });
     </script>
     
     <!-- SEO Meta Tags -->
