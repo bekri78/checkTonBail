@@ -82,6 +82,7 @@ function App() {
         <div className="fr-container fr-py-8w">
           {currentPage === "analyse" && <AnalyseBail userId={userId} />}
           {currentPage === "about" && <AboutPage />}
+          {currentPage === "faq" && <FAQ />}
           {currentPage === "mentions" && <MentionsLegales />}
           {currentPage === "cgv" && <CGV />}
           {currentPage === "confidentialite" && <PolitiqueConfidentialite />}
@@ -115,6 +116,15 @@ function App() {
             <ul className="fr-footer__bottom-list">
               <li className="fr-footer__bottom-item">
                 <span className="fr-footer__bottom-link">© {new Date().getFullYear()} CheckTonBail</span>
+              </li>
+              <li className="fr-footer__bottom-item">
+                <button 
+                  className="fr-footer__bottom-link" 
+                  onClick={() => setCurrentPage("faq")}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  FAQ
+                </button>
               </li>
               <li className="fr-footer__bottom-item">
                 <button 
@@ -1186,6 +1196,122 @@ function AboutPage() {
             <strong>Avertissement :</strong> CheckTonBail fournit une analyse automatisée à titre informatif.
             Elle ne remplace pas l'avis d'un professionnel du droit. En cas de litige,
             consultez un avocat ou une association de défense des locataires.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Page FAQ
+function FAQ() {
+  const [openIndex, setOpenIndex] = useState(null);
+
+  const faqItems = [
+    {
+      question: "Comment fonctionne CheckTonBail ?",
+      answer: "CheckTonBail utilise l'intelligence artificielle pour analyser votre contrat de bail. Uploadez simplement votre bail au format PDF, et notre IA identifie les clauses abusives, les points à surveiller et vous fournit des recommandations personnalisées en moins de 30 secondes."
+    },
+    {
+      question: "Quels types de baux pouvez-vous analyser ?",
+      answer: "Nous analysons tous les baux d'habitation : baux vides (non meublés), baux meublés, baux étudiants (9 mois), et baux mobilité. Notre service est spécialisé dans les contrats de location soumis à la loi du 6 juillet 1989 et la loi ALUR."
+    },
+    {
+      question: "L'analyse gratuite est-elle vraiment gratuite ?",
+      answer: "Oui ! L'analyse gratuite vous donne un aperçu de votre bail : type de bail, informations clés, score de risque et nombre de clauses problématiques détectées. Vous pouvez effectuer 3 analyses gratuites par jour."
+    },
+    {
+      question: "Que contient l'analyse complète à 1.99€ ?",
+      answer: "L'analyse complète comprend : le détail de chaque clause abusive avec la référence légale, les clauses déséquilibrées, les points à surveiller, les éléments favorables au locataire, l'impact sur votre dépôt de garantie, et des recommandations personnalisées pour vous protéger."
+    },
+    {
+      question: "Mes documents sont-ils sécurisés ?",
+      answer: "Absolument. Vos documents sont transmis de manière chiffrée (SSL), analysés en temps réel, puis immédiatement supprimés de nos serveurs. Nous ne conservons aucune copie de vos baux. Vos données bancaires sont traitées par Stripe, leader mondial du paiement sécurisé."
+    },
+    {
+      question: "L'analyse remplace-t-elle un avocat ?",
+      answer: "Non. CheckTonBail fournit une analyse informative basée sur l'IA pour vous aider à comprendre votre bail. Pour des situations complexes ou des litiges, nous vous recommandons de consulter un avocat spécialisé en droit immobilier."
+    },
+    {
+      question: "Que faire si je trouve des clauses abusives ?",
+      answer: "Les clauses abusives sont réputées non écrites selon la loi. Cela signifie qu'elles n'ont aucune valeur juridique même si vous avez signé le bail. Vous pouvez refuser de les appliquer et, en cas de litige, saisir la Commission départementale de conciliation ou le tribunal."
+    },
+    {
+      question: "Combien de temps dure l'analyse ?",
+      answer: "L'analyse prend généralement entre 20 et 40 secondes selon la longueur de votre bail. Pendant ce temps, nous extrayons le texte, l'analysons avec notre IA juridique, et générons votre rapport personnalisé."
+    },
+    {
+      question: "Comment récupérer mon dépôt de garantie ?",
+      answer: "Notre analyse évalue le risque de perte de votre caution et vous donne des conseils concrets : faire un état des lieux détaillé, prendre des photos, garder les preuves d'entretien. En cas de retenue abusive, vous pouvez envoyer une mise en demeure puis saisir le tribunal."
+    },
+    {
+      question: "Puis-je me faire rembourser ?",
+      answer: "Le service étant délivré immédiatement après paiement (contenu numérique), le droit de rétractation ne s'applique pas conformément à l'article L221-28 du Code de la consommation. Cependant, contactez-nous en cas de problème technique."
+    }
+  ];
+
+  return (
+    <div className="fr-grid-row fr-grid-row--center">
+      <div className="fr-col-12 fr-col-lg-8">
+        <h1>Questions Fréquentes</h1>
+        <p className="fr-text--lead fr-mb-4w">
+          Tout ce que vous devez savoir sur CheckTonBail et l'analyse de votre bail locatif.
+        </p>
+        
+        <div className="fr-accordions-group">
+          {faqItems.map((item, index) => (
+            <section key={index} className="fr-accordion">
+              <h3 className="fr-accordion__title">
+                <button
+                  className="fr-accordion__btn"
+                  aria-expanded={openIndex === index}
+                  aria-controls={`accordion-${index}`}
+                  onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '1rem',
+                    background: openIndex === index ? '#f5f5fe' : '#fff',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  {item.question}
+                  <span style={{ marginLeft: '1rem' }}>{openIndex === index ? '−' : '+'}</span>
+                </button>
+              </h3>
+              {openIndex === index && (
+                <div 
+                  className="fr-collapse" 
+                  id={`accordion-${index}`}
+                  style={{
+                    padding: '1rem',
+                    background: '#f9f9f9',
+                    borderRadius: '0 0 4px 4px',
+                    marginTop: '-8px',
+                    marginBottom: '8px',
+                    border: '1px solid #ddd',
+                    borderTop: 'none'
+                  }}
+                >
+                  <p style={{ margin: 0, lineHeight: 1.6 }}>{item.answer}</p>
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
+
+        <div className="fr-callout fr-mt-4w">
+          <h3 className="fr-callout__title">Une autre question ?</h3>
+          <p className="fr-callout__text">
+            Contactez-nous par email à <a href="mailto:checkTonBail@outlook.com">checkTonBail@outlook.com</a>
           </p>
         </div>
       </div>
