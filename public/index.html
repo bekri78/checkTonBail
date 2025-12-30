@@ -72,6 +72,74 @@
       ]
     }
     </script>
+    
+    <!-- FAQ Schema pour Google Rich Snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Qu'est-ce qu'une clause abusive dans un bail ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Une clause abusive est une disposition du contrat de location qui crée un déséquilibre significatif entre les droits et obligations du propriétaire et du locataire, au détriment de ce dernier. Ces clauses sont interdites par la loi et réputées non écrites."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment fonctionne l'analyse de bail par IA ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Vous téléchargez votre bail en PDF, notre IA l'analyse en quelques secondes et identifie les clauses potentiellement abusives, les manquements à la loi ALUR, et vous fournit des recommandations personnalisées."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Le dépôt de garantie peut-il dépasser 1 mois de loyer ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Non, pour un logement vide, le dépôt de garantie ne peut pas excéder 1 mois de loyer hors charges. Pour un meublé, il peut aller jusqu'à 2 mois. Toute clause prévoyant un montant supérieur est abusive."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Combien coûte l'analyse complète d'un bail ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "L'analyse complète de votre bail coûte seulement 1,99€. Vous obtenez un aperçu gratuit avant de payer pour voir si des problèmes ont été détectés."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Mes données sont-elles sécurisées ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, votre bail est analysé de manière sécurisée et n'est jamais stocké sur nos serveurs. Les données sont supprimées immédiatement après l'analyse, conformément au RGPD."
+          }
+        }
+      ]
+    }
+    </script>
+    
+    <!-- LocalBusiness Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LegalService",
+      "name": "CheckTonBail",
+      "description": "Service d'analyse automatique de baux locatifs par intelligence artificielle",
+      "url": "https://www.check-ton-bail.fr",
+      "logo": "https://www.check-ton-bail.fr/logo-checktonbail.svg",
+      "priceRange": "€",
+      "areaServed": {
+        "@type": "Country",
+        "name": "France"
+      },
+      "serviceType": ["Analyse de bail", "Détection clauses abusives", "Conseil juridique locatif"]
+    }
+    </script>
   </head>
   <body>
     <noscript>Vous devez activer JavaScript pour utiliser cette application.</noscript>
