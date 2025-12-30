@@ -1205,7 +1205,7 @@ function AboutPage() {
 
 // Page FAQ
 function FAQ() {
-  const [openIndex, setOpenIndex] = useState(null);
+  const [openIndex, setOpenIndex] = React.useState(null);
 
   const faqItems = [
     {
