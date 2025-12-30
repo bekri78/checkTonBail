@@ -36,10 +36,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000091" />
     
-    <!-- Police Marianne (DSFR) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Marianne:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- DNS Prefetch & Preconnect pour performances -->
+    <link rel="dns-prefetch" href="https://checktonbail.onrender.com" />
+    <link rel="preconnect" href="https://checktonbail.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://js.stripe.com" />
+    <link rel="preconnect" href="https://js.stripe.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Police Marianne (DSFR) - chargement optimisé -->
+    <link href="https://fonts.googleapis.com/css2?family=Marianne:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Marianne:wght@400;500;700&display=swap" rel="stylesheet" /></noscript>
+    
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     
     <!-- Structured Data (JSON-LD) pour Google -->

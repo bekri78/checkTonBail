@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense, memo } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import "./App.css";
@@ -6,7 +6,7 @@ import "./App.css";
 // En production: REACT_APP_API_BASE=https://ton-backend.railway.app
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:4000";
 
-// Clé publique Stripe - En production: REACT_APP_STRIPE_PUBLIC_KEY=pk_live_xxx
+// Clé publique Stripe - Chargement lazy pour ne pas bloquer le rendu initial
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY || "pk_test_S453tNJo0VGUC7Y6qNVxldgX00vo9ixxkp");
 
 function App() {
