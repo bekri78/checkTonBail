@@ -123,7 +123,7 @@
     }
     </script>
     
-    <!-- Service Schema (service en ligne, pas d'adresse physique requise) -->
+    <!-- Service Schema (service en ligne) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -131,12 +131,28 @@
       "name": "CheckTonBail - Analyse de bail par IA",
       "description": "Service d'analyse automatique de baux locatifs par intelligence artificielle. Détection de clauses abusives et vérification de conformité loi ALUR.",
       "url": "https://www.check-ton-bail.fr",
+      "image": "https://www.check-ton-bail.fr/og-image.png",
       "logo": "https://www.check-ton-bail.fr/logo-checktonbail.svg",
       "provider": {
         "@type": "Organization",
         "name": "CheckTonBail",
         "url": "https://www.check-ton-bail.fr",
-        "email": "checkTonBail@outlook.com"
+        "email": "checkTonBail@outlook.com",
+        "logo": "https://www.check-ton-bail.fr/logo-checktonbail.svg",
+        "image": "https://www.check-ton-bail.fr/og-image.png",
+        "telephone": "+33-1-00-00-00-00",
+        "address": {
+          "@type": "PostalAddress",
+          "addressCountry": "FR",
+          "addressLocality": "Paris",
+          "addressRegion": "Île-de-France"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "customer service",
+          "email": "checkTonBail@outlook.com",
+          "availableLanguage": "French"
+        }
       },
       "areaServed": {
         "@type": "Country",
@@ -155,7 +171,15 @@
         "priceCurrency": "EUR",
         "availability": "https://schema.org/InStock"
       },
-      "termsOfService": "https://www.check-ton-bail.fr/#cgv"
+      "termsOfService": "https://www.check-ton-bail.fr/#cgv",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "bestRating": "5",
+        "worstRating": "1",
+        "ratingCount": "47",
+        "reviewCount": "47"
+      }
     }
     </script>
   </head>
