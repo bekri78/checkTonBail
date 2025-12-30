@@ -318,6 +318,16 @@ function LoaderOverlay() {
   return null; // On gère dans chaque composant
 }
 
+// ==========================================
+// 📊 GOOGLE ANALYTICS - Événements & Conversions
+// ==========================================
+const trackEvent = (eventName, params = {}) => {
+  if (window.gtag) {
+    window.gtag('event', eventName, params);
+    console.log('📊 Analytics:', eventName, params);
+  }
+};
+
 function AnalyseBail({ userId }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -351,6 +361,13 @@ function AnalyseBail({ userId }) {
     setAnalysis(null);
     setTeaser(null);
     setError("");
+    
+    // 📊 Track: Upload de fichier
+    trackEvent('file_upload', {
+      event_category: 'engagement',
+      event_label: 'PDF uploaded',
+      file_size: Math.round(selectedFile.size / 1024) // en KB
+    });
   };
 
   const handleDragOver = (e) => {
@@ -425,6 +442,14 @@ function AnalyseBail({ userId }) {
       setProgress("");
       setIsRateLimited(false);
       setTeaser(data);
+      
+      // 📊 Track: Teaser affiché (aperçu gratuit)
+      trackEvent('teaser_displayed', {
+        event_category: 'funnel',
+        event_label: 'Free preview shown',
+        clauses_count: data.analyse?.clauses_problematiques?.length || 0
+      });
+      
       if (data.extractedText) {
         setExtractedText(data.extractedText);
         console.log("📝 Texte extrait stocké:", data.extractedText.length, "caractères");
@@ -478,6 +503,16 @@ function AnalyseBail({ userId }) {
       setProgress("");
       setAnalysis(data);
       setTeaser(null);
+      
+      // 📊 Track: Conversion - Analyse complète affichée
+      trackEvent('purchase', {
+        event_category: 'conversion',
+        event_label: 'Full analysis displayed',
+        value: 1.99,
+        currency: 'EUR',
+        transaction_id: data.paymentIntentId || 'unknown'
+      });
+      
     } catch (err) {
       console.error(err);
       setProgress("");
@@ -492,6 +527,14 @@ function AnalyseBail({ userId }) {
       setError("Erreur: fichier ou utilisateur non identifié");
       return;
     }
+    
+    // 📊 Track: Clic sur bouton paiement
+    trackEvent('begin_checkout', {
+      event_category: 'funnel',
+      event_label: 'Payment button clicked',
+      value: 1.99,
+      currency: 'EUR'
+    });
 
     try {
       const res = await fetch(`${API_BASE}/api/create-payment-intent`, {
@@ -578,6 +621,16 @@ function AnalyseBail({ userId }) {
       setProgress("");
       setAnalysis(data);
       setIsRateLimited(false);
+      
+      // 📊 Track: Conversion - Analyse complète affichée (direct)
+      trackEvent('purchase', {
+        event_category: 'conversion',
+        event_label: 'Full analysis displayed (direct)',
+        value: 1.99,
+        currency: 'EUR',
+        transaction_id: paymentIntentId || 'unknown'
+      });
+      
     } catch (err) {
       console.error(err);
       setProgress("");
