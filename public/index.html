@@ -227,5 +227,20 @@
   <body>
     <noscript>Vous devez activer JavaScript pour utiliser cette application.</noscript>
     <div id="root"></div>
+    
+    <!-- Enregistrement Service Worker pour PWA -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW enregistré:', registration.scope);
+            })
+            .catch((error) => {
+              console.log('SW erreur:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

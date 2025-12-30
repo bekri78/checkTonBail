@@ -1,6 +1,7 @@
 {
   "short_name": "CheckTonBail",
-  "name": "CheckTonBail - Analyse de bail locatif",
+  "name": "CheckTonBail - Analyse de bail locatif par IA",
+  "description": "Analysez votre bail et détectez les clauses abusives grâce à l'intelligence artificielle",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +11,31 @@
     {
       "src": "android-chrome-192x192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "android-chrome-512x512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#000091",
-  "background_color": "#ffffff"
+  "background_color": "#ffffff",
+  "lang": "fr-FR",
+  "categories": ["utilities", "finance"],
+  "shortcuts": [
+    {
+      "name": "Analyser un bail",
+      "short_name": "Analyser",
+      "description": "Commencer l'analyse d'un bail",
+      "url": "/",
+      "icons": [{ "src": "android-chrome-192x192.png", "sizes": "192x192" }]
+    }
+  ]
 }
