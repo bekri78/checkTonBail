@@ -340,6 +340,31 @@ function AnalyseBail({ userId }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [clientSecret, setClientSecret] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [serverReady, setServerReady] = useState(false);
+
+  // 🔥 Warm-up du serveur au chargement de la page (évite le cold start Render)
+  useEffect(() => {
+    const warmUpServer = async () => {
+      try {
+        console.log("🔄 Réveil du serveur...");
+        const startTime = Date.now();
+        const res = await fetch(`${API_BASE}/api/health`, { 
+          method: 'GET',
+          signal: AbortSignal.timeout(60000) // Timeout 60s pour cold start
+        });
+        if (res.ok) {
+          const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+          console.log(`✅ Serveur prêt en ${duration}s`);
+          setServerReady(true);
+        }
+      } catch (err) {
+        console.log("⚠️ Serveur en cours de démarrage...", err.message);
+        // Réessayer après 5s
+        setTimeout(warmUpServer, 5000);
+      }
+    };
+    warmUpServer();
+  }, []);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0] || null;
@@ -847,6 +872,14 @@ function AnalyseBail({ userId }) {
             </div>
           )}
 
+          {/* Indicateur serveur en cours de démarrage */}
+          {!serverReady && (
+            <div className="fr-alert fr-alert--info fr-mt-2w" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="fr-icon-refresh-line" aria-hidden="true" style={{ animation: 'spin 1s linear infinite' }}></span>
+              <p style={{ margin: 0 }}>⏳ Préparation du service d'analyse... (quelques secondes)</p>
+            </div>
+          )}
+
           {/* Boutons selon l'état */}
           <div className="fr-mt-4w">
             {isRateLimited && file ? (
@@ -862,7 +895,7 @@ function AnalyseBail({ userId }) {
                 <button
                   className="fr-btn fr-btn--lg"
                   onClick={handleOpenPaymentDirect}
-                  disabled={loading}
+                  disabled={loading || !serverReady}
                   style={{ width: "100%" }}
                 >
                   💳 Analyser mon bail - 1.99€
@@ -875,10 +908,10 @@ function AnalyseBail({ userId }) {
               <button
                 className="fr-btn fr-btn--lg"
                 onClick={handleTeaserAnalysis}
-                disabled={!file || loading}
+                disabled={!file || loading || !serverReady}
                 style={{ width: "100%" }}
               >
-                🔍 Analyser mon bail gratuitement
+                {!serverReady ? '⏳ Préparation...' : '🔍 Analyser mon bail gratuitement'}
               </button>
             )}
           </div>
