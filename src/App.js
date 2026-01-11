@@ -155,9 +155,22 @@ function CookieBanner() {
 function App() {
   const [currentPage, setCurrentPage] = useState("analyse");
   const [userId, setUserId] = useState(null);
+  
+  // 🌍 Détection automatique de la langue du navigateur
   const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('checktonbail_lang') || 'fr';
+    // Priorité : localStorage > langue navigateur > français par défaut
+    const savedLang = localStorage.getItem('checktonbail_lang');
+    if (savedLang) return savedLang;
+    
+    // Détecter la langue du navigateur
+    const browserLang = navigator.language || navigator.userLanguage || 'fr';
+    const langCode = browserLang.split('-')[0].toLowerCase(); // 'fr-FR' -> 'fr'
+    
+    // Vérifier si la langue est supportée
+    const supportedLangs = ['fr', 'en', 'es', 'de', 'pt'];
+    return supportedLangs.includes(langCode) ? langCode : 'en'; // Anglais par défaut si non supporté
   });
+  
   const [selectedCountry, setSelectedCountry] = useState(() => {
     return localStorage.getItem('checktonbail_country') || 'FR';
   });
@@ -213,28 +226,27 @@ function App() {
               </div>
               <div className="fr-header__tools">
                 <div className="fr-header__tools-links">
-                  <ul className="fr-btns-group">
-                    {/* Sélecteur de langue */}
-                    <li>
-                      <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: "4px",
-                          border: "1px solid #ddd",
-                          background: "#fff",
-                          cursor: "pointer",
-                          fontSize: "14px"
-                        }}
-                        title="Changer la langue"
-                      >
-                        {LANGUAGES.map(lang => (
-                          <option key={lang.code} value={lang.code}>
-                            {lang.flag} {lang.name}
-                          </option>
-                        ))}
-                      </select>
+                  <ul className="fr-btns-group" style={{ alignItems: 'center' }}>
+                    {/* Sélecteur de langue avec drapeaux visibles */}
+                    <li style={{ display: 'flex', gap: '4px' }}>
+                      {LANGUAGES.map(lang => (
+                        <button
+                          key={lang.code}
+                          onClick={() => setLanguage(lang.code)}
+                          title={lang.name}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: "4px",
+                            border: language === lang.code ? "2px solid #000091" : "1px solid #ddd",
+                            background: language === lang.code ? "#e3e3fd" : "#fff",
+                            cursor: "pointer",
+                            fontSize: "18px",
+                            transition: "all 0.2s ease"
+                          }}
+                        >
+                          {lang.flag}
+                        </button>
+                      ))}
                     </li>
                     <li>
                       <button 
@@ -866,43 +878,64 @@ function AnalyseBail({ userId, language = 'fr', selectedCountry = 'FR', setSelec
             </p>
           </div>
 
-          {/* 🌍 Sélecteur de pays */}
+          {/* 🌍 Sélecteur de pays avec drapeaux visibles */}
           <div className="fr-mb-4w" style={{ 
             background: '#f5f5fe', 
             borderRadius: '8px', 
             padding: '1.5rem',
             border: '1px solid #ddd'
           }}>
-            <label htmlFor="country-select" style={{ 
+            <label style={{ 
               display: 'block', 
-              marginBottom: '0.75rem', 
+              marginBottom: '1rem', 
               fontWeight: '600',
-              color: '#000091'
+              color: '#000091',
+              fontSize: '1rem'
             }}>
               🌍 {t ? t('selectCountry') : 'Dans quel pays est situé le logement ?'}
             </label>
-            <select
-              id="country-select"
-              value={selectedCountry}
-              onChange={(e) => setSelectedCountry(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                fontSize: '16px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                background: '#fff',
-                cursor: 'pointer'
-              }}
-            >
+            
+            {/* Grille de pays avec drapeaux */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '10px'
+            }}>
               {COUNTRIES.map(country => (
-                <option key={country.code} value={country.code}>
-                  {country.flag} {country.name[language] || country.name['fr']}
-                </option>
+                <button
+                  key={country.code}
+                  type="button"
+                  onClick={() => setSelectedCountry(country.code)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    border: selectedCountry === country.code 
+                      ? '2px solid #000091' 
+                      : '2px solid #ddd',
+                    background: selectedCountry === country.code 
+                      ? '#e3e3fd' 
+                      : '#fff',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    fontWeight: selectedCountry === country.code ? '600' : '400'
+                  }}
+                >
+                  <span style={{ fontSize: '1.5rem' }}>{country.flag}</span>
+                  <span style={{ 
+                    fontSize: '0.9rem',
+                    color: selectedCountry === country.code ? '#000091' : '#333'
+                  }}>
+                    {country.name[language] || country.name['fr']}
+                  </span>
+                </button>
               ))}
-            </select>
-            <p className="fr-text--xs" style={{ marginTop: '0.5rem', color: '#666' }}>
-              {t ? t('countryHelp') : 'Sélectionnez le pays pour une analyse juridique adaptée'}
+            </div>
+            
+            <p className="fr-text--xs" style={{ marginTop: '1rem', color: '#666' }}>
+              {t ? t('countryHelp') : 'Sélectionnez le pays pour une analyse juridique adaptée aux lois locales'}
             </p>
           </div>
 
