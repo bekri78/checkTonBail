@@ -227,42 +227,27 @@ function App() {
               <div className="fr-header__tools">
                 <div className="fr-header__tools-links">
                   <ul className="fr-btns-group" style={{ alignItems: 'center' }}>
-                    {/* Sélecteur de langue avec images de drapeaux */}
-                    <li style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      {[
-                        { code: 'fr', name: 'Français', img: 'https://flagcdn.com/24x18/fr.png' },
-                        { code: 'en', name: 'English', img: 'https://flagcdn.com/24x18/gb.png' },
-                        { code: 'es', name: 'Español', img: 'https://flagcdn.com/24x18/es.png' },
-                        { code: 'de', name: 'Deutsch', img: 'https://flagcdn.com/24x18/de.png' },
-                        { code: 'pt', name: 'Português', img: 'https://flagcdn.com/24x18/pt.png' },
-                      ].map(lang => (
-                        <button
-                          key={lang.code}
-                          onClick={() => setLanguage(lang.code)}
-                          title={lang.name}
-                          style={{
-                            padding: "4px 6px",
-                            borderRadius: "4px",
-                            border: language === lang.code ? "2px solid #000091" : "1px solid transparent",
-                            background: language === lang.code ? "#e3e3fd" : "transparent",
-                            cursor: "pointer",
-                            transition: "all 0.2s ease",
-                            display: 'flex',
-                            alignItems: 'center'
-                          }}
-                        >
-                          <img 
-                            src={lang.img} 
-                            alt={lang.name}
-                            style={{ 
-                              width: '24px', 
-                              height: '18px',
-                              borderRadius: '2px',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
-                            }}
-                          />
-                        </button>
-                      ))}
+                    {/* Sélecteur de langue - Liste déroulante */}
+                    <li>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: "4px",
+                          border: "1px solid #ddd",
+                          background: "#fff",
+                          cursor: "pointer",
+                          fontSize: "14px"
+                        }}
+                        title="Changer la langue"
+                      >
+                        <option value="fr">🇫🇷 Français</option>
+                        <option value="en">🇬🇧 English</option>
+                        <option value="es">🇪🇸 Español</option>
+                        <option value="de">🇩🇪 Deutsch</option>
+                        <option value="pt">🇵🇹 Português</option>
+                      </select>
                     </li>
                     <li>
                       <button 
@@ -901,9 +886,9 @@ function AnalyseBail({ userId, language = 'fr', selectedCountry = 'FR', setSelec
             padding: '1.5rem',
             border: '1px solid #ddd'
           }}>
-            <label style={{ 
+            <label htmlFor="country-select" style={{ 
               display: 'block', 
-              marginBottom: '1rem', 
+              marginBottom: '0.75rem', 
               fontWeight: '600',
               color: '#000091',
               fontSize: '1rem'
@@ -911,58 +896,30 @@ function AnalyseBail({ userId, language = 'fr', selectedCountry = 'FR', setSelec
               🌍 {t ? t('selectCountry') : 'Dans quel pays est situé le logement ?'}
             </label>
             
-            {/* Sélecteur de pays avec drapeaux images */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
-              {[
-                { code: 'FR', name: 'France', img: 'https://flagcdn.com/48x36/fr.png' },
-                { code: 'ES', name: 'España', img: 'https://flagcdn.com/48x36/es.png' },
-                { code: 'PT', name: 'Portugal', img: 'https://flagcdn.com/48x36/pt.png' },
-                { code: 'BE', name: 'Belgique', img: 'https://flagcdn.com/48x36/be.png' },
-                { code: 'DE', name: 'Deutschland', img: 'https://flagcdn.com/48x36/de.png' },
-              ].map(country => (
-                <div
-                  key={country.code}
-                  onClick={() => setSelectedCountry(country.code)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '12px 20px',
-                    borderRadius: '8px',
-                    border: selectedCountry === country.code 
-                      ? '3px solid #000091' 
-                      : '2px solid #ddd',
-                    background: selectedCountry === country.code 
-                      ? '#e3e3fd' 
-                      : '#fff',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    minWidth: '100px'
-                  }}
-                >
-                  <img 
-                    src={country.img} 
-                    alt={country.name}
-                    style={{ 
-                      width: '48px', 
-                      height: '36px', 
-                      borderRadius: '4px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                    }}
-                  />
-                  <span style={{ 
-                    marginTop: '8px',
-                    fontSize: '0.85rem',
-                    fontWeight: selectedCountry === country.code ? '600' : '400',
-                    color: selectedCountry === country.code ? '#000091' : '#333'
-                  }}>
-                    {country.name}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {/* Sélecteur de pays - Liste déroulante */}
+            <select
+              id="country-select"
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                fontSize: '16px',
+                borderRadius: '4px',
+                border: '1px solid #ccc',
+                background: '#fff',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="FR">🇫🇷 France</option>
+              <option value="ES">🇪🇸 Espagne (España)</option>
+              <option value="PT">🇵🇹 Portugal</option>
+              <option value="BE">🇧🇪 Belgique</option>
+              <option value="DE">🇩🇪 Allemagne (Deutschland)</option>
+              <option value="UK">🇬🇧 Royaume-Uni (United Kingdom)</option>
+            </select>
             
-            <p className="fr-text--xs" style={{ marginTop: '1rem', color: '#666', textAlign: 'center' }}>
+            <p className="fr-text--xs" style={{ marginTop: '0.75rem', color: '#666' }}>
               {t ? t('countryHelp') : 'Sélectionnez le pays pour une analyse juridique adaptée aux lois locales'}
             </p>
           </div>

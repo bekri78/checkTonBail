@@ -8,6 +8,7 @@ export const COUNTRIES = [
   { code: 'PT', name: { fr: 'Portugal', en: 'Portugal', es: 'Portugal', de: 'Portugal', pt: 'Portugal' }, flag: '🇵🇹' },
   { code: 'BE', name: { fr: 'Belgique', en: 'Belgium', es: 'Bélgica', de: 'Belgien', pt: 'Bélgica' }, flag: '🇧🇪' },
   { code: 'DE', name: { fr: 'Allemagne', en: 'Germany', es: 'Alemania', de: 'Deutschland', pt: 'Alemanha' }, flag: '🇩🇪' },
+  { code: 'UK', name: { fr: 'Royaume-Uni', en: 'United Kingdom', es: 'Reino Unido', de: 'Vereinigtes Königreich', pt: 'Reino Unido' }, flag: '🇬🇧' },
 ];
 
 export const LANGUAGES = [

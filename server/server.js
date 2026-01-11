@@ -543,7 +543,7 @@ app.post("/api/analyse-teaser", upload.single('file'), async (req, res) => {
 
     // 🌍 Récupérer le pays (défaut: France)
     const countryCode = req.body.country || 'FR';
-    const validCountries = ['FR', 'ES', 'PT', 'BE', 'DE'];
+    const validCountries = ['FR', 'ES', 'PT', 'BE', 'DE', 'UK'];
     const country = validCountries.includes(countryCode) ? countryCode : 'FR';
     const countryInfoRoute = getCountryInfo(country);
 
@@ -632,7 +632,7 @@ app.post("/api/analyse-bail-text", async (req, res) => {
     const { bailText, fileName, userId, paymentIntentId, country: reqCountry } = req.body;
     
     // 🌍 Récupérer le pays (défaut: France)
-    const validCountries = ['FR', 'ES', 'PT', 'BE', 'DE'];
+    const validCountries = ['FR', 'ES', 'PT', 'BE', 'DE', 'UK'];
     const country = validCountries.includes(reqCountry) ? reqCountry : 'FR';
     const countryInfo = getCountryInfo(country);
     

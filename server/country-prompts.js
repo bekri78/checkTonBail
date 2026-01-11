@@ -379,6 +379,82 @@ UNWIRKSAME KLAUSELN IN DEUTSCHLAND:
 ${JSON_RESPONSE_FORMAT}
 Antworte auf DEUTSCH.
 `
+  },
+
+  // 🇬🇧 ROYAUME-UNI (UK)
+  UK: {
+    name: "United Kingdom",
+    flag: "🇬🇧",
+    teaserPrompt: `
+You are an expert in UK residential tenancy law.
+
+STEP 1: First verify if this document is a tenancy agreement (AST, lease, rental contract).
+
+If it's NOT a tenancy agreement, respond:
+{
+  "est_bail": false,
+  "type_document_detecte": "brief description",
+  "message_erreur": "This document does not appear to be a tenancy agreement. We detected [type]. Please upload your rental contract."
+}
+
+If it IS a tenancy agreement, analyse it and EXTRACT:
+
+{
+  "est_bail": true,
+  "type_bail": "AST/Assured Shorthold/Other",
+  "adresse_bien": "full property address",
+  "surface": "sq ft or sq m",
+  "loyer_mensuel": "monthly rent £",
+  "charges": "bills included £ or Not specified",
+  "depot_garantie": "deposit £",
+  "duree_bail": "fixed term/periodic",
+  "score_risque": 1-10,
+  "niveau_risque": "low|moderate|high|critical",
+  "nb_clauses_problematiques": number,
+  "nb_points_attention": number,
+  "resume": "2-3 sentences"
+}
+
+Law: Housing Act 1988/2004, Tenant Fees Act 2019, Deregulation Act 2015.
+Deposit: Must be in government scheme (DPS, TDS, MyDeposits).
+RESPOND ONLY IN JSON.
+`,
+    fullPrompt: `
+You are an expert in UK residential tenancy law under the Housing Act 1988 (as amended), Landlord and Tenant Act 1985, Tenant Fees Act 2019, and Deregulation Act 2015.
+
+KEY UK TENANCY LAW POINTS:
+- Most private rentals are Assured Shorthold Tenancies (AST)
+- Minimum fixed term usually 6-12 months
+- Deposit capped at 5 weeks rent (rent under £50k/year)
+- Deposit MUST be protected in government scheme within 30 days
+- Landlord must provide prescribed information about deposit
+- Tenant Fees Act 2019: No fees except rent, deposit, holding deposit, contract changes
+- Section 21 notice (no-fault eviction) requires proper process
+- Section 8 notice for breach of tenancy
+- Fitness for Human Habitation Act 2018
+- Right to Rent checks required
+- EPC rating minimum E (moving to C)
+- Gas Safety Certificate annual
+- Electrical Safety Certificate every 5 years
+- Smoke and CO alarms required
+- How to Rent guide must be provided
+
+ILLEGAL/PROBLEMATIC CLAUSES IN UK:
+- Charging tenant fees (banned since June 2019)
+- Deposit over 5 weeks rent
+- No deposit protection scheme
+- Waiving tenant's statutory rights
+- Blanket pet/children bans may be unfair
+- Unreasonable break clause conditions
+- Excessive rent increase clauses
+- Denying quiet enjoyment
+- Requiring professional cleaning regardless of condition
+- Unfair wear and tear deductions
+- Retaliatory eviction clauses
+
+${JSON_RESPONSE_FORMAT}
+Respond in ENGLISH.
+`
   }
 };
 
