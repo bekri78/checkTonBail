@@ -88,6 +88,19 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "check-ton-bail.fr"
+        }
+      ],
+      "destination": "https://www.check-ton-bail.fr/:path*",
+      "permanent": true
+    }
+  ],
   "trailingSlash": false,
   "cleanUrls": true
 }
