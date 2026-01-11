@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { translations, COUNTRIES, LANGUAGES } from "./i18n/translations.js";
 import "./App.css";
 
 // En production: REACT_APP_API_BASE=https://ton-backend.railway.app
@@ -154,6 +155,24 @@ function CookieBanner() {
 function App() {
   const [currentPage, setCurrentPage] = useState("analyse");
   const [userId, setUserId] = useState(null);
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('checktonbail_lang') || 'fr';
+  });
+  const [selectedCountry, setSelectedCountry] = useState(() => {
+    return localStorage.getItem('checktonbail_country') || 'FR';
+  });
+
+  // Sauvegarder les préférences
+  useEffect(() => {
+    localStorage.setItem('checktonbail_lang', language);
+  }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem('checktonbail_country', selectedCountry);
+  }, [selectedCountry]);
+
+  // Helper pour les traductions
+  const t = (key) => translations[language]?.[key] || translations['fr'][key] || key;
 
   useEffect(() => {
     let id = localStorage.getItem("checktonbail_userId");
@@ -195,12 +214,34 @@ function App() {
               <div className="fr-header__tools">
                 <div className="fr-header__tools-links">
                   <ul className="fr-btns-group">
+                    {/* Sélecteur de langue */}
+                    <li>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: "4px",
+                          border: "1px solid #ddd",
+                          background: "#fff",
+                          cursor: "pointer",
+                          fontSize: "14px"
+                        }}
+                        title="Changer la langue"
+                      >
+                        {LANGUAGES.map(lang => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.flag} {lang.name}
+                          </option>
+                        ))}
+                      </select>
+                    </li>
                     <li>
                       <button 
                         className={`fr-btn ${currentPage === "analyse" ? "" : "fr-btn--secondary"}`}
                         onClick={() => setCurrentPage("analyse")}
                       >
-                        Analyser
+                        {t('analyzeButton').replace('🔍 ', '').replace(' gratuit', '').replace('ement', '').replace(' mon bail', '')}
                       </button>
                     </li>
                     <li>
@@ -222,7 +263,15 @@ function App() {
       {/* Main Content */}
       <main role="main" id="content">
         <div className="fr-container fr-py-8w">
-          {currentPage === "analyse" && <AnalyseBail userId={userId} />}
+          {currentPage === "analyse" && (
+            <AnalyseBail 
+              userId={userId} 
+              language={language}
+              selectedCountry={selectedCountry}
+              setSelectedCountry={setSelectedCountry}
+              t={t}
+            />
+          )}
           {currentPage === "about" && <AboutPage />}
           {currentPage === "faq" && <FAQ />}
           {currentPage === "mentions" && <MentionsLegales />}
@@ -325,7 +374,7 @@ const trackEvent = (eventName, params = {}) => {
   }
 };
 
-function AnalyseBail({ userId }) {
+function AnalyseBail({ userId, language = 'fr', selectedCountry = 'FR', setSelectedCountry, t }) {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState("");
@@ -338,6 +387,12 @@ function AnalyseBail({ userId }) {
   const [clientSecret, setClientSecret] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [serverReady, setServerReady] = useState(false);
+
+  // Helper pour le nom du pays dans la langue courante
+  const getCountryName = (code) => {
+    const country = COUNTRIES.find(c => c.code === code);
+    return country ? `${country.flag} ${country.name[language] || country.name['fr']}` : code;
+  };
 
   // 🔥 Warm-up du serveur au chargement de la page (évite le cold start Render)
   useEffect(() => {
@@ -417,7 +472,7 @@ function AnalyseBail({ userId }) {
 
   const handleTeaserAnalysis = async () => {
     if (!file) {
-      setError("Merci de sélectionner un fichier de bail.");
+      setError(t ? t('errorNoFile') : "Merci de sélectionner un fichier de bail.");
       return;
     }
 
@@ -428,10 +483,11 @@ function AnalyseBail({ userId }) {
     setExtractedText(null);
 
     try {
-      console.log("🎁 Demande de teaser gratuit...");
-      setProgress("Analyse rapide en cours...");
+      console.log(`🎁 Demande de teaser gratuit pour pays: ${selectedCountry}...`);
+      setProgress(t ? t('analyzingProgress') : "Analyse rapide en cours...");
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('country', selectedCountry); // 🌍 Envoyer le pays sélectionné
 
       const res = await fetch(`${API_BASE}/api/analyse-teaser`, {
         method: "POST",
@@ -511,7 +567,8 @@ function AnalyseBail({ userId }) {
           bailText: extractedText,
           fileName: teaser?.fileName || file?.name || "bail.pdf",
           userId,
-          paymentIntentId
+          paymentIntentId,
+          country: selectedCountry // 🌍 Envoyer le pays sélectionné
         })
       });
 
@@ -803,9 +860,49 @@ function AnalyseBail({ userId }) {
         <div className="fr-col-12 fr-col-md-8 fr-col-lg-6">
           {/* Hero */}
           <div className="fr-mb-6w" style={{ textAlign: "center" }}>
-            <h1>Analysez votre bail gratuitement</h1>
+            <h1>{t ? t('heroTitle') : 'Analysez votre bail gratuitement'}</h1>
             <p className="fr-text--lead">
-              Déposez votre bail et découvrez instantanément les clauses problématiques
+              {t ? t('heroSubtitle') : 'Déposez votre bail et découvrez instantanément les clauses problématiques'}
+            </p>
+          </div>
+
+          {/* 🌍 Sélecteur de pays */}
+          <div className="fr-mb-4w" style={{ 
+            background: '#f5f5fe', 
+            borderRadius: '8px', 
+            padding: '1.5rem',
+            border: '1px solid #ddd'
+          }}>
+            <label htmlFor="country-select" style={{ 
+              display: 'block', 
+              marginBottom: '0.75rem', 
+              fontWeight: '600',
+              color: '#000091'
+            }}>
+              🌍 {t ? t('selectCountry') : 'Dans quel pays est situé le logement ?'}
+            </label>
+            <select
+              id="country-select"
+              value={selectedCountry}
+              onChange={(e) => setSelectedCountry(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                fontSize: '16px',
+                borderRadius: '4px',
+                border: '1px solid #ccc',
+                background: '#fff',
+                cursor: 'pointer'
+              }}
+            >
+              {COUNTRIES.map(country => (
+                <option key={country.code} value={country.code}>
+                  {country.flag} {country.name[language] || country.name['fr']}
+                </option>
+              ))}
+            </select>
+            <p className="fr-text--xs" style={{ marginTop: '0.5rem', color: '#666' }}>
+              {t ? t('countryHelp') : 'Sélectionnez le pays pour une analyse juridique adaptée'}
             </p>
           </div>
 
@@ -997,6 +1094,9 @@ function AnalyseBail({ userId }) {
           <div className="fr-callout fr-mb-4w">
             <h2 className="fr-callout__title">🎁 Aperçu gratuit de votre bail</h2>
             <p>Fichier : {teaser.fileName}</p>
+            <p style={{ fontSize: '0.9rem', color: '#666' }}>
+              🌍 Analyse juridique : {getCountryName(selectedCountry)}
+            </p>
           </div>
 
           {/* Infos clés */}

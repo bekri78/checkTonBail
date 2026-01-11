@@ -11,6 +11,7 @@ import { getCredits, addCredits, useCredit, createUser } from "./credits.js";
 import { canAnalyze, trackAnalysis, getMonthlyStats } from "./usage-tracker.js";
 import fs from "fs";
 import vision from "@google-cloud/vision";
+import { getCountryPrompt, getCountryInfo, getSupportedCountries } from "./country-prompts.js";
 
 const require = createRequire(import.meta.url);
 const pdfParse = require("pdf-parse");
@@ -141,8 +142,10 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-// Helper: appel GPT-4o pour analyse juridique
-async function analyseBailWithGPT(bailText) {
+// Helper: appel GPT-4o pour analyse juridique - MULTILINGUE
+async function analyseBailWithGPT(bailText, countryCode = 'FR') {
+  const countryInfo = getCountryInfo(countryCode);
+  console.log(`🔍 ANALYSE COMPLÈTE GPT-4o - Pays: ${countryInfo.name} (${countryCode})`);
   const systemPrompt = `
 Tu es un juriste expert en droit immobilier français, spécialisé dans l'analyse des baux d'habitation régis par la loi du 6 juillet 1989, les lois ALUR et ELAN, le Code civil, le Code de la construction et de l'habitation, ainsi que les textes et obligations actuellement en vigueur.
 
@@ -367,9 +370,10 @@ NE CHANGE PAS la structure.
   };
 }
 
-// Helper: Analyse TEASER gratuite avec GROQ (100% GRATUIT)
-async function analyseBailTeaser(bailText) {
-  const systemPrompt = `
+// Helper: Analyse TEASER gratuite avec GROQ (100% GRATUIT) - MULTILINGUE
+async function analyseBailTeaser(bailText, countryCode = 'FR') {
+  const countryInfo = getCountryInfo(countryCode);
+  const systemPrompt = getCountryPrompt(countryCode, 'teaser') || `
 Tu es un juriste expert en droit immobilier français.
 
 ÉTAPE 1 : Vérifie d'abord si ce document est bien un bail d'habitation (contrat de location).
@@ -413,10 +417,11 @@ RÉPONDS UNIQUEMENT EN JSON STRICT. Aucun texte avant ou après.
   // Augmenter le texte pour mieux analyser (15000 caractères pour capturer plus d'infos)
   const limitedText = bailText.slice(0, 15000);
   
-  console.log(`📝 TEASER - Texte analysé: ${limitedText.length} caractères sur ${bailText.length} total`);
+  console.log(`📝 TEASER - Pays: ${countryInfo.name} (${countryCode})`);
+  console.log(`   Texte analysé: ${limitedText.length} caractères sur ${bailText.length} total`);
   
   // Debug: chercher le dépôt de garantie dans le texte
-  const depotMatch = bailText.match(/(?:dépôt|depot|garantie|caution)[^\d]*(\d+)/gi);
+  const depotMatch = bailText.match(/(?:dépôt|depot|garantie|caution|fianza|kaution|caução)[^\d]*(\d+)/gi);
   if (depotMatch) {
     console.log(`   🔍 Mentions trouvées pour dépôt/garantie: ${depotMatch.join(', ')}`);
   }
@@ -439,7 +444,8 @@ RÉPONDS UNIQUEMENT EN JSON STRICT. Aucun texte avant ou après.
   
   return {
     teaser: JSON.parse(content),
-    cost: 0 // GRATUIT !
+    cost: 0, // GRATUIT !
+    country: countryCode
   };
 }
 
@@ -523,12 +529,23 @@ app.get("/api/stats", async (req, res) => {
   }
 });
 
-// 🎁 Route TEASER GRATUIT : analyse rapide sans crédit
+// � Route pour récupérer la liste des pays supportés
+app.get("/api/countries", (req, res) => {
+  res.json({ success: true, countries: getSupportedCountries() });
+});
+
+// 🎁 Route TEASER GRATUIT : analyse rapide sans crédit - MULTILINGUE
 app.post("/api/analyse-teaser", upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "Fichier manquant." });
     }
+
+    // 🌍 Récupérer le pays (défaut: France)
+    const countryCode = req.body.country || 'FR';
+    const validCountries = ['FR', 'ES', 'PT', 'BE', 'DE'];
+    const country = validCountries.includes(countryCode) ? countryCode : 'FR';
+    const countryInfoRoute = getCountryInfo(country);
 
     // 🚦 Vérifier rate limit par IP
     const clientIP = getClientIP(req);
@@ -556,6 +573,7 @@ app.post("/api/analyse-teaser", upload.single('file'), async (req, res) => {
 
     const fileName = req.file.originalname;
     console.log("🎁 TEASER GRATUIT:", fileName);
+    console.log(`   🌍 Pays: ${countryInfoRoute.name} (${country})`);
     console.log("   Taille:", req.file.size, "bytes");
     console.log("   IP:", clientIP, "| Analyses restantes:", rateCheck.remaining);
 
@@ -563,8 +581,8 @@ app.post("/api/analyse-teaser", upload.single('file'), async (req, res) => {
     const bailText = await extractTextFromPDF(req.file.buffer);
     console.log("   Caractères extraits:", bailText.length);
 
-    // Analyse TEASER (courte, moins chère)
-    const result = await analyseBailTeaser(bailText);
+    // Analyse TEASER avec le pays sélectionné
+    const result = await analyseBailTeaser(bailText, country);
     
     // Vérifier si c'est bien un bail
     if (!result.teaser.est_bail) {
@@ -593,6 +611,7 @@ app.post("/api/analyse-teaser", upload.single('file'), async (req, res) => {
       teaser: result.teaser,
       extractedText: bailText, // 📝 Renvoyer le texte pour éviter de refaire l'OCR
       isTeaser: true,
+      country: result.country, // 🌍 Pays de l'analyse
       remaining, // Nombre d'analyses gratuites restantes
       message: remaining > 0 
         ? `Aperçu gratuit - Il vous reste ${remaining} analyse(s) gratuite(s) aujourd'hui`
@@ -607,10 +626,15 @@ app.post("/api/analyse-teaser", upload.single('file'), async (req, res) => {
   }
 });
 
-// 💰 Route ANALYSE PAYANTE avec texte déjà extrait (pas d'OCR)
+// 💰 Route ANALYSE PAYANTE avec texte déjà extrait (pas d'OCR) - MULTILINGUE
 app.post("/api/analyse-bail-text", async (req, res) => {
   try {
-    const { bailText, fileName, userId, paymentIntentId } = req.body;
+    const { bailText, fileName, userId, paymentIntentId, country: reqCountry } = req.body;
+    
+    // 🌍 Récupérer le pays (défaut: France)
+    const validCountries = ['FR', 'ES', 'PT', 'BE', 'DE'];
+    const country = validCountries.includes(reqCountry) ? reqCountry : 'FR';
+    const countryInfo = getCountryInfo(country);
     
     if (!bailText || bailText.length < 100) {
       return res.status(400).json({ error: "Texte du bail manquant ou trop court." });
@@ -657,11 +681,12 @@ app.post("/api/analyse-bail-text", async (req, res) => {
     }
 
     console.log("📄 Analyse PAYANTE (texte pré-extrait):", fileName);
+    console.log(`   🌍 Pays: ${countryInfo.name} (${country})`);
     console.log("   Caractères:", bailText.length);
     console.log("   Utilisateur:", userId);
 
-    // Analyse GPT complète
-    const result = await analyseBailWithGPT(bailText);
+    // Analyse GPT complète avec le pays
+    const result = await analyseBailWithGPT(bailText, country);
     
     // 📊 Tracker le coût
     await trackAnalysis(result.cost, userId);
@@ -671,7 +696,8 @@ app.post("/api/analyse-bail-text", async (req, res) => {
     res.json({
       success: true,
       fileName,
-      analysis: result.analysis
+      analysis: result.analysis,
+      country: country // 🌍 Pays de l'analyse
     });
   } catch (err) {
     console.error("❌ Erreur /api/analyse-bail-text:", err.message);
