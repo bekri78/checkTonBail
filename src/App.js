@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense, memo, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import "./App.css";
@@ -310,9 +310,6 @@ function App() {
     </>
   );
 }
-
-// Contexte global pour le loader
-const LoaderContext = React.createContext();
 
 function LoaderOverlay() {
   return null; // On gère dans chaque composant
