@@ -227,8 +227,13 @@ function App() {
               <div className="fr-header__tools">
                 <div className="fr-header__tools-links">
                   <ul className="fr-btns-group" style={{ alignItems: 'center' }}>
-                    {/* Sélecteur de langue - Liste déroulante */}
-                    <li>
+                    {/* Sélecteur de langue - Liste déroulante avec drapeau */}
+                    <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <img 
+                        src={`https://flagcdn.com/24x18/${language === 'en' ? 'gb' : language}.png`}
+                        alt=""
+                        style={{ width: '24px', height: '18px', borderRadius: '2px', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
+                      />
                       <select
                         value={language}
                         onChange={(e) => setLanguage(e.target.value)}
@@ -242,11 +247,11 @@ function App() {
                         }}
                         title="Changer la langue"
                       >
-                        <option value="fr">🇫🇷 Français</option>
-                        <option value="en">🇬🇧 English</option>
-                        <option value="es">🇪🇸 Español</option>
-                        <option value="de">🇩🇪 Deutsch</option>
-                        <option value="pt">🇵🇹 Português</option>
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="de">Deutsch</option>
+                        <option value="pt">Português</option>
                       </select>
                     </li>
                     <li>
@@ -896,28 +901,35 @@ function AnalyseBail({ userId, language = 'fr', selectedCountry = 'FR', setSelec
               🌍 {t ? t('selectCountry') : 'Dans quel pays est situé le logement ?'}
             </label>
             
-            {/* Sélecteur de pays - Liste déroulante */}
-            <select
-              id="country-select"
-              value={selectedCountry}
-              onChange={(e) => setSelectedCountry(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                fontSize: '16px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                background: '#fff',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="FR">🇫🇷 France</option>
-              <option value="ES">🇪🇸 Espagne (España)</option>
-              <option value="PT">🇵🇹 Portugal</option>
-              <option value="BE">🇧🇪 Belgique</option>
-              <option value="DE">🇩🇪 Allemagne (Deutschland)</option>
-              <option value="UK">🇬🇧 Royaume-Uni (United Kingdom)</option>
-            </select>
+            {/* Sélecteur de pays - Liste déroulante avec drapeau */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <img 
+                src={`https://flagcdn.com/48x36/${selectedCountry === 'UK' ? 'gb' : selectedCountry.toLowerCase()}.png`}
+                alt=""
+                style={{ width: '48px', height: '36px', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
+              />
+              <select
+                id="country-select"
+                value={selectedCountry}
+                onChange={(e) => setSelectedCountry(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  fontSize: '16px',
+                  borderRadius: '4px',
+                  border: '1px solid #ccc',
+                  background: '#fff',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="FR">France</option>
+                <option value="ES">Espagne (España)</option>
+                <option value="PT">Portugal</option>
+                <option value="BE">Belgique</option>
+                <option value="DE">Allemagne (Deutschland)</option>
+                <option value="UK">Royaume-Uni (United Kingdom)</option>
+              </select>
+            </div>
             
             <p className="fr-text--xs" style={{ marginTop: '0.75rem', color: '#666' }}>
               {t ? t('countryHelp') : 'Sélectionnez le pays pour une analyse juridique adaptée aux lois locales'}
