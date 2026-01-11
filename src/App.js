@@ -227,24 +227,40 @@ function App() {
               <div className="fr-header__tools">
                 <div className="fr-header__tools-links">
                   <ul className="fr-btns-group" style={{ alignItems: 'center' }}>
-                    {/* Sélecteur de langue avec drapeaux visibles */}
-                    <li style={{ display: 'flex', gap: '4px' }}>
-                      {LANGUAGES.map(lang => (
+                    {/* Sélecteur de langue avec images de drapeaux */}
+                    <li style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {[
+                        { code: 'fr', name: 'Français', img: 'https://flagcdn.com/24x18/fr.png' },
+                        { code: 'en', name: 'English', img: 'https://flagcdn.com/24x18/gb.png' },
+                        { code: 'es', name: 'Español', img: 'https://flagcdn.com/24x18/es.png' },
+                        { code: 'de', name: 'Deutsch', img: 'https://flagcdn.com/24x18/de.png' },
+                        { code: 'pt', name: 'Português', img: 'https://flagcdn.com/24x18/pt.png' },
+                      ].map(lang => (
                         <button
                           key={lang.code}
                           onClick={() => setLanguage(lang.code)}
                           title={lang.name}
                           style={{
-                            padding: "6px 10px",
+                            padding: "4px 6px",
                             borderRadius: "4px",
-                            border: language === lang.code ? "2px solid #000091" : "1px solid #ddd",
-                            background: language === lang.code ? "#e3e3fd" : "#fff",
+                            border: language === lang.code ? "2px solid #000091" : "1px solid transparent",
+                            background: language === lang.code ? "#e3e3fd" : "transparent",
                             cursor: "pointer",
-                            fontSize: "18px",
-                            transition: "all 0.2s ease"
+                            transition: "all 0.2s ease",
+                            display: 'flex',
+                            alignItems: 'center'
                           }}
                         >
-                          {lang.flag}
+                          <img 
+                            src={lang.img} 
+                            alt={lang.name}
+                            style={{ 
+                              width: '24px', 
+                              height: '18px',
+                              borderRadius: '2px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
+                            }}
+                          />
                         </button>
                       ))}
                     </li>
@@ -895,46 +911,58 @@ function AnalyseBail({ userId, language = 'fr', selectedCountry = 'FR', setSelec
               🌍 {t ? t('selectCountry') : 'Dans quel pays est situé le logement ?'}
             </label>
             
-            {/* Grille de pays avec drapeaux */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: '10px'
-            }}>
-              {COUNTRIES.map(country => (
-                <button
+            {/* Sélecteur de pays avec drapeaux images */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
+              {[
+                { code: 'FR', name: 'France', img: 'https://flagcdn.com/48x36/fr.png' },
+                { code: 'ES', name: 'España', img: 'https://flagcdn.com/48x36/es.png' },
+                { code: 'PT', name: 'Portugal', img: 'https://flagcdn.com/48x36/pt.png' },
+                { code: 'BE', name: 'Belgique', img: 'https://flagcdn.com/48x36/be.png' },
+                { code: 'DE', name: 'Deutschland', img: 'https://flagcdn.com/48x36/de.png' },
+              ].map(country => (
+                <div
                   key={country.code}
-                  type="button"
                   onClick={() => setSelectedCountry(country.code)}
                   style={{
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 16px',
+                    padding: '12px 20px',
                     borderRadius: '8px',
                     border: selectedCountry === country.code 
-                      ? '2px solid #000091' 
+                      ? '3px solid #000091' 
                       : '2px solid #ddd',
                     background: selectedCountry === country.code 
                       ? '#e3e3fd' 
                       : '#fff',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    fontWeight: selectedCountry === country.code ? '600' : '400'
+                    minWidth: '100px'
                   }}
                 >
-                  <span style={{ fontSize: '1.5rem' }}>{country.flag}</span>
+                  <img 
+                    src={country.img} 
+                    alt={country.name}
+                    style={{ 
+                      width: '48px', 
+                      height: '36px', 
+                      borderRadius: '4px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }}
+                  />
                   <span style={{ 
-                    fontSize: '0.9rem',
+                    marginTop: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: selectedCountry === country.code ? '600' : '400',
                     color: selectedCountry === country.code ? '#000091' : '#333'
                   }}>
-                    {country.name[language] || country.name['fr']}
+                    {country.name}
                   </span>
-                </button>
+                </div>
               ))}
             </div>
             
-            <p className="fr-text--xs" style={{ marginTop: '1rem', color: '#666' }}>
+            <p className="fr-text--xs" style={{ marginTop: '1rem', color: '#666', textAlign: 'center' }}>
               {t ? t('countryHelp') : 'Sélectionnez le pays pour une analyse juridique adaptée aux lois locales'}
             </p>
           </div>
