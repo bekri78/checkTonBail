@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { translations, COUNTRIES, LANGUAGES } from "./i18n/translations.js";
+import { translations, COUNTRIES } from "./i18n/translations.js";
 import "./App.css";
 
 // En production: REACT_APP_API_BASE=https://ton-backend.railway.app
