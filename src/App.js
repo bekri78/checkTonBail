@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { translations, COUNTRIES } from "./i18n/translations.js";
+import { translations, COUNTRIES, LANGUAGES } from "./i18n/translations.js";
 import "./App.css";
 
 // En production: REACT_APP_API_BASE=https://ton-backend.railway.app
@@ -247,11 +247,11 @@ function App() {
                         }}
                         title="Changer la langue"
                       >
-                        <option value="fr">Français</option>
-                        <option value="en">English</option>
-                        <option value="es">Español</option>
-                        <option value="de">Deutsch</option>
-                        <option value="pt">Português</option>
+                        {LANGUAGES.map(lang => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.flag} {lang.name}
+                          </option>
+                        ))}
                       </select>
                     </li>
                     <li>
