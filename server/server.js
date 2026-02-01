@@ -12,6 +12,7 @@ import { canAnalyze, trackAnalysis, getMonthlyStats } from "./usage-tracker.js";
 import fs from "fs";
 import vision from "@google-cloud/vision";
 import { getCountryPrompt, getCountryInfo, getSupportedCountries } from "./country-prompts.js";
+import crypto from "crypto";
 
 const require = createRequire(import.meta.url);
 const pdfParse = require("pdf-parse");
@@ -24,8 +25,55 @@ const port = process.env.PORT || 4000;
 // Stripe client
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Multer setup for file upload
-const upload = multer({ storage: multer.memoryStorage() });
+// ==========================================
+// ⚡ OPTIMISATION 1: Pool de Vision clients (OCR parallèle massif)
+// ==========================================
+const VISION_POOL_SIZE = 5;
+const visionClients = Array(VISION_POOL_SIZE).fill(null).map(() => 
+  new vision.ImageAnnotatorClient({ apiKey: process.env.GOOGLE_VISION_API_KEY })
+);
+let visionIndex = 0;
+const getVisionClient = () => {
+  const client = visionClients[visionIndex];
+  visionIndex = (visionIndex + 1) % VISION_POOL_SIZE;
+  return client;
+};
+
+// ==========================================
+// ⚡ OPTIMISATION 2: Cache OCR persistant (évite re-traitement)
+// ==========================================
+const ocrCache = new Map();
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24h
+
+function getCacheKey(buffer) {
+  return crypto.createHash('md5').update(buffer).digest('hex');
+}
+
+function getCachedOCR(buffer) {
+  const key = getCacheKey(buffer);
+  const cached = ocrCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    console.log(`📦 CACHE HIT! ${cached.text.length} caractères récupérés instantanément`);
+    return cached.text;
+  }
+  return null;
+}
+
+function setCachedOCR(buffer, text) {
+  const key = getCacheKey(buffer);
+  ocrCache.set(key, { text, timestamp: Date.now() });
+  // Nettoyer anciennes entrées si > 500
+  if (ocrCache.size > 500) {
+    const oldest = ocrCache.keys().next().value;
+    ocrCache.delete(oldest);
+  }
+}
+
+// Multer setup for file upload (optimisé)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 } // 20 Mo max
+});
 
 // CORS - Autoriser le frontend (localhost en dev, domaine en prod)
 const corsOrigins = process.env.CORS_ORIGIN 
@@ -336,7 +384,7 @@ NE CHANGE PAS la structure.
 
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4o-mini",
     temperature: 0, // Résultats déterministes et reproductibles
     response_format: { type: "json_object" },
     messages: [
@@ -449,74 +497,101 @@ RÉPONDS UNIQUEMENT EN JSON STRICT. Aucun texte avant ou après.
   };
 }
 
-// Client Google Vision pour OCR ultra-rapide
-const visionClient = new vision.ImageAnnotatorClient({
-  apiKey: process.env.GOOGLE_VISION_API_KEY
-});
-
-// Fonction pour extraire le texte du PDF avec OCR si nécessaire
+// ==========================================
+// ⚡ OPTIMISATION 3: Extraction PDF ultra-rapide avec cache + batching
+// ==========================================
 async function extractTextFromPDF(buffer) {
+  // 1. Vérifier le cache d'abord (instantané si même PDF)
+  const cached = getCachedOCR(buffer);
+  if (cached) return cached;
+
+  const startTime = Date.now();
+  
   try {
-    // Essayer d'abord l'extraction native
+    // 2. Essayer extraction native (instantanée pour PDF texte)
     const data = await pdfParse(buffer);
     const text = data.text.trim();
     
-    if (text.length > 100) { 
-      console.log(`✅ Texte natif extrait: ${text.length} caractères`);
+    if (text.length > 200) {
+      const duration = Date.now() - startTime;
+      console.log(`✅ PDF natif: ${text.length} chars en ${duration}ms`);
+      setCachedOCR(buffer, text);
       return text;
-    } else {
-      // PDF scanné, utiliser Google Vision OCR (ultra-rapide !)
-      console.log("⚠️ PDF scanné détecté, conversion en images + Google Vision OCR...");
-      
-      const startTime = Date.now();
-      
-      // Convertir PDF en images PNG
-      const pngPages = await pdfToPng(buffer, {
-        disableFontFace: false,
-        useSystemFonts: false,
-        viewportScale: 2.0,
-      });
-      
-      console.log(`   ${pngPages.length} pages à traiter avec Google Vision...`);
-      
-      // OCR en PARALLÈLE avec Google Vision (beaucoup plus rapide !)
-      const ocrPromises = pngPages.map((page, i) => {
-        console.log(`   🔄 Lancement OCR page ${i + 1}...`);
-        return visionClient.textDetection({
-          image: { content: page.content.toString('base64') }
-        }).then(([result]) => {
-          const text = result.fullTextAnnotation?.text || '';
-          console.log(`   ✓ Page ${i + 1} terminée (${text.length} chars)`);
-          return { index: i, text };
-        });
-      });
-      
-      // Attendre toutes les pages en parallèle
-      const results = await Promise.all(ocrPromises);
-      
-      // Reconstituer le texte dans l'ordre des pages
-      results.sort((a, b) => a.index - b.index);
-      const fullText = results.map(r => r.text).join("\n");
-      
-      const ocrText = fullText.trim();
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`✅ Google Vision OCR terminé en ${duration}s: ${ocrText.length} caractères extraits`);
-      
-      if (ocrText.length < 100) {
-        throw new Error("Impossible d'extraire suffisamment de texte du PDF");
-      }
-      
-      return ocrText;
     }
+    
+    // 3. PDF scanné - OCR PARALLÈLE OPTIMISÉ
+    console.log("⚠️ PDF scanné détecté, OCR parallèle optimisé...");
+    
+    const pngStart = Date.now();
+    // viewportScale réduit: 1.8 au lieu de 2.0 = ~20% plus rapide, qualité suffisante
+    const pngPages = await pdfToPng(buffer, {
+      disableFontFace: false,
+      useSystemFonts: false,
+      viewportScale: 1.8,
+    });
+    console.log(`   📄 ${pngPages.length} pages converties en ${Date.now() - pngStart}ms`);
+    
+    // ⚡ OCR par LOTS avec pool de clients Vision
+    const ocrStart = Date.now();
+    const BATCH_SIZE = 8; // Traiter 8 pages simultanément max
+    const allTexts = [];
+    
+    for (let i = 0; i < pngPages.length; i += BATCH_SIZE) {
+      const batch = pngPages.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(pngPages.length / BATCH_SIZE);
+      
+      const batchPromises = batch.map((page, idx) => 
+        getVisionClient().textDetection({
+          image: { content: page.content.toString('base64') }
+        }).then(([result]) => ({
+          index: i + idx,
+          text: result.fullTextAnnotation?.text || ''
+        })).catch(err => {
+          console.error(`   ❌ Erreur OCR page ${i + idx + 1}:`, err.message);
+          return { index: i + idx, text: '' };
+        })
+      );
+      
+      const batchResults = await Promise.all(batchPromises);
+      allTexts.push(...batchResults);
+      console.log(`   ✅ Lot ${batchNum}/${totalBatches} terminé (${batch.length} pages)`);
+    }
+    
+    // Reconstituer dans l'ordre
+    allTexts.sort((a, b) => a.index - b.index);
+    const fullText = allTexts.map(r => r.text).join("\n\n");
+    
+    const ocrText = fullText.trim();
+    const totalTime = Date.now() - startTime;
+    const ocrTime = Date.now() - ocrStart;
+    
+    console.log(`✅ OCR complet: ${ocrText.length} chars, ${pngPages.length} pages`);
+    console.log(`   ⏱️ Conversion: ${pngStart - startTime}ms | OCR: ${ocrTime}ms | Total: ${totalTime}ms`);
+    
+    if (ocrText.length < 100) {
+      throw new Error("Impossible d'extraire suffisamment de texte du PDF");
+    }
+    
+    // Mettre en cache pour futures requêtes
+    setCachedOCR(buffer, ocrText);
+    return ocrText;
+    
   } catch (err) {
-    console.error("Erreur extraction texte PDF:", err);
+    console.error("❌ Erreur extraction PDF:", err.message);
     throw err;
   }
 }
 
-// Route de test
+// Route de test - améliorée avec stats
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "CheckTonBail backend up" });
+  res.json({ 
+    status: "ok", 
+    message: "CheckTonBail backend up",
+    cacheSize: ocrCache.size,
+    visionPoolSize: VISION_POOL_SIZE,
+    uptime: Math.floor(process.uptime()) + "s"
+  });
 });
 
 // Route admin : stats d'usage (protège-la en production !)
