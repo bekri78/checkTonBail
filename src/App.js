@@ -416,20 +416,15 @@ function AnalyseBail({ userId, language = 'fr', selectedCountry = 'FR', setSelec
   useEffect(() => {
     const warmUpServer = async () => {
       try {
-        console.log("🔄 Réveil du serveur...");
-        const startTime = Date.now();
         const res = await fetch(`${API_BASE}/api/health`, { 
           method: 'GET',
-          signal: AbortSignal.timeout(60000) // Timeout 60s pour cold start
+          signal: AbortSignal.timeout(60000)
         });
         if (res.ok) {
-          const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-          console.log(`✅ Serveur prêt en ${duration}s`);
           setServerReady(true);
         }
       } catch (err) {
-        console.log("⚠️ Serveur en cours de démarrage...", err.message);
-        // Réessayer après 5s
+        // Réessayer après 5s si le serveur n'est pas encore prêt
         setTimeout(warmUpServer, 5000);
       }
     };

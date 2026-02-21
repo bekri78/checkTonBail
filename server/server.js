@@ -1060,4 +1060,15 @@ app.get("/api/verify-payment/:sessionId", async (req, res) => {
 
 app.listen(port, () => {
   console.log(`✅ Backend CheckTonBail running on http://localhost:${port}`);
+
+  // 🔥 Keep-alive : ping toutes les 14 min pour éviter le sleep Render
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`;
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${SELF_URL}/api/health`);
+      if (res.ok) console.log(`♻️ Keep-alive OK (${new Date().toISOString()})`);
+    } catch (err) {
+      console.warn(`⚠️ Keep-alive ping failed: ${err.message}`);
+    }
+  }, 14 * 60 * 1000); // 14 minutes
 });
