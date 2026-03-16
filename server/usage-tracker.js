@@ -16,10 +16,11 @@ async function loadUsage() {
     const data = await fs.readFile(USAGE_FILE, 'utf-8');
     return JSON.parse(data);
   } catch (error) {
-    return { 
+    return {
       currentMonth: new Date().toISOString().slice(0, 7), // YYYY-MM
       totalCost: 0,
-      analyses: []
+      analyses: [],
+      usedSessions: []
     };
   }
 }
@@ -52,6 +53,20 @@ export async function canAnalyze() {
   }
   
   return { allowed: true };
+}
+
+// Vérifier si une session Stripe a déjà été utilisée
+export async function isSessionUsed(sessionId) {
+  const usage = await loadUsage();
+  return (usage.usedSessions || []).includes(sessionId);
+}
+
+// Marquer une session Stripe comme utilisée
+export async function markSessionUsed(sessionId) {
+  const usage = await loadUsage();
+  if (!usage.usedSessions) usage.usedSessions = [];
+  usage.usedSessions.push(sessionId);
+  await saveUsage(usage);
 }
 
 // Enregistrer une analyse

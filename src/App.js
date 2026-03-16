@@ -1,13 +1,85 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { translations, COUNTRIES, LANGUAGES } from "./i18n/translations.js";
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
+const translations = {
+  tagline: "Analysez votre bail en 30 secondes",
+  heroTitle: "Analysez votre bail gratuitement",
+  heroSubtitle: "Déposez votre bail et découvrez instantanément les clauses problématiques",
+  dropzoneText: "Glissez-déposez votre bail ici",
+  dropzoneTextDragging: "Déposez votre fichier ici",
+  dropzoneClickText: "ou cliquez pour sélectionner un fichier",
+  dropzoneFormat: "PDF uniquement • 10 Mo max",
+  dropzoneChangeFile: "Cliquez pour changer de fichier",
+  analyzeButton: "🔍 Analyser mon bail",
+  analyzingButton: "⏳ Analyse en cours...",
+  preparingButton: "⏳ Préparation...",
+  downloadReport: "📥 Télécharger le rapport PDF",
+  newAnalysis: "🔄 Nouvelle analyse",
+  preparingService: "⏳ Préparation du service d'analyse... (quelques secondes)",
+  analyzingProgress: "Analyse en cours...",
+  resultsTitle: "Analyse complète de votre bail",
+  abusiveClauses: "Clauses abusives détectées",
+  unbalancedClauses: "Clauses déséquilibrées",
+  watchPoints: "Points à surveiller",
+  favorableElements: "Éléments favorables au locataire",
+  recommendations: "Recommandations générales",
+  depositImpact: "Impact sur la caution",
+  simpleSummary: "Résumé simple",
+  problem: "Problème",
+  legalBasis: "Base légale",
+  recommendation: "Recommandation",
+  explanation: "Explication",
+  whyFavorable: "Pourquoi c'est favorable",
+  riskLevel: "Niveau de risque",
+  concreteActions: "Actions concrètes pour protéger votre caution",
+  paymentTitle: "Finaliser le paiement",
+  paymentReassurance: "Paiement sécurisé par Stripe",
+  trustPayment: "Paiement sécurisé",
+  trustDelete: "Fichier supprimé après analyse",
+  trustRefund: "Satisfait ou remboursé",
+  errorFileType: "Seuls les fichiers PDF sont acceptés.",
+  errorFileSize: "Le fichier ne doit pas dépasser 10 Mo.",
+  errorNoFile: "Merci de sélectionner un fichier de bail.",
+  errorServer: "Impossible de contacter le serveur. Vérifiez votre connexion ou réessayez.",
+  errorUnknown: "Erreur inconnue",
+  legalNotice: "Mentions légales",
+  privacy: "Confidentialité",
+  terms: "CGV",
+  contact: "Contact",
+  emailLabel: "Votre email (optionnel)",
+  emailPlaceholder: "exemple@email.com",
+  emailHelp: "Pour recevoir votre rapport par email",
+  faqConfidential: "Mon bail est-il confidentiel ?",
+  faqConfidentialAnswer: "Oui, votre fichier est supprimé immédiatement après analyse.",
+  faqTypes: "Quels types de baux sont analysés ?",
+  faqTypesAnswer: "Baux d'habitation vides et meublés, régis par la loi du 6 juillet 1989.",
+  faqDuration: "Combien de temps dure l'analyse ?",
+  faqDurationAnswer: "L'analyse prend généralement moins d'une minute.",
+  faqIllegal: "Que se passe-t-il si une clause illégale est trouvée ?",
+  faqIllegalAnswer: "Nous vous indiquons la base légale et nos recommandations pour vous protéger.",
+  faqRefund: "Puis-je être remboursé ?",
+  faqRefundAnswer: "Oui, contactez-nous sous 24h si vous n'êtes pas satisfait.",
+};
+import "@gouvfr/dsfr/dist/dsfr.min.css";
+import "@gouvfr/dsfr/dist/utility/icons/icons.min.css";
 import "./App.css";
 
-// En production: REACT_APP_API_BASE=https://ton-backend.railway.app
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:4000";
 
-// Clé publique Stripe - Chargement différé pour améliorer le LCP
+// ==========================================
+// CONSTANTES GLOBALES
+// ==========================================
+/* eslint-disable no-unused-vars */
+const PRICE = "9,90\u20ac";
+const PRICE_NUMERIC = 9.90;
+const SS_KEYS = {
+  extractedText: 'ctb_extractedText',
+  fileName: 'ctb_fileName',
+  userEmail: 'ctb_userEmail',
+};
+/* eslint-enable no-unused-vars */
+
+// Stripe - Chargement différé
 let stripePromise = null;
 const getStripe = () => {
   if (!stripePromise) {
@@ -16,8 +88,15 @@ const getStripe = () => {
   return stripePromise;
 };
 
+// Google Analytics
+const trackEvent = (eventName, params = {}) => {
+  if (window.gtag) {
+    window.gtag('event', eventName, params);
+  }
+};
+
 // ==========================================
-// 🍪 BANNIÈRE COOKIES RGPD
+// BANNIERE COOKIES RGPD
 // ==========================================
 function CookieBanner() {
   const [showBanner, setShowBanner] = useState(false);
@@ -34,11 +113,8 @@ function CookieBanner() {
     localStorage.setItem("cookie_consent", "all");
     localStorage.setItem("cookie_consent_date", new Date().toISOString());
     setShowBanner(false);
-    // Activer Google Analytics
     if (window.gtag) {
-      window.gtag('consent', 'update', {
-        'analytics_storage': 'granted'
-      });
+      window.gtag('consent', 'update', { 'analytics_storage': 'granted' });
     }
   };
 
@@ -46,11 +122,8 @@ function CookieBanner() {
     localStorage.setItem("cookie_consent", "essential");
     localStorage.setItem("cookie_consent_date", new Date().toISOString());
     setShowBanner(false);
-    // Désactiver Google Analytics
     if (window.gtag) {
-      window.gtag('consent', 'update', {
-        'analytics_storage': 'denied'
-      });
+      window.gtag('consent', 'update', { 'analytics_storage': 'denied' });
     }
   };
 
@@ -58,36 +131,22 @@ function CookieBanner() {
 
   return (
     <div style={{
-      position: "fixed",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      background: "#fff",
-      borderTop: "3px solid #000091",
-      padding: "20px",
-      boxShadow: "0 -4px 20px rgba(0,0,0,0.15)",
-      zIndex: 10000
+      position: "fixed", bottom: 0, left: 0, right: 0,
+      background: "#fff", borderTop: "3px solid #000091",
+      padding: "20px", boxShadow: "0 -4px 20px rgba(0,0,0,0.15)", zIndex: 10000
     }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "20px", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: "300px" }}>
-            <h3 style={{ margin: "0 0 10px 0", color: "#000091" }}>🍪 Gestion des cookies</h3>
+            <h3 style={{ margin: "0 0 10px 0", color: "#000091" }}>Gestion des cookies</h3>
             <p style={{ margin: "0 0 10px 0", fontSize: "14px", color: "#333" }}>
-              Nous utilisons des cookies pour améliorer votre expérience et analyser le trafic de notre site. 
-              Vous pouvez accepter tous les cookies ou uniquement les cookies essentiels au fonctionnement du site.
+              Nous utilisons des cookies pour am&eacute;liorer votre exp&eacute;rience et analyser le trafic de notre site.
             </p>
-            
             {showDetails && (
-              <div style={{ 
-                background: "#f6f6f6", 
-                padding: "15px", 
-                borderRadius: "8px", 
-                marginBottom: "10px",
-                fontSize: "13px"
-              }}>
+              <div style={{ background: "#f6f6f6", padding: "15px", borderRadius: "8px", marginBottom: "10px", fontSize: "13px" }}>
                 <p style={{ margin: "0 0 10px 0" }}><strong>Cookies essentiels</strong> (toujours actifs)</p>
                 <ul style={{ margin: "0 0 15px 20px", padding: 0 }}>
-                  <li>Mémorisation de vos préférences de cookies</li>
+                  <li>M&eacute;morisation de vos pr&eacute;f&eacute;rences de cookies</li>
                   <li>Fonctionnement du paiement Stripe</li>
                   <li>Identifiant de session anonyme</li>
                 </ul>
@@ -97,52 +156,24 @@ function CookieBanner() {
                 </ul>
               </div>
             )}
-            
-            <button 
+            <button
               onClick={() => setShowDetails(!showDetails)}
-              style={{ 
-                background: "none", 
-                border: "none", 
-                color: "#000091", 
-                textDecoration: "underline",
-                cursor: "pointer",
-                padding: 0,
-                fontSize: "13px"
-              }}
+              style={{ background: "none", border: "none", color: "#000091", textDecoration: "underline", cursor: "pointer", padding: 0, fontSize: "13px" }}
             >
-              {showDetails ? "Masquer les détails" : "En savoir plus"}
+              {showDetails ? "Masquer les d\u00e9tails" : "En savoir plus"}
             </button>
           </div>
-          
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-            <button
-              onClick={acceptEssential}
-              style={{
-                padding: "12px 24px",
-                background: "#fff",
-                color: "#000091",
-                border: "1px solid #000091",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontWeight: "500",
-                fontSize: "14px"
-              }}
-            >
+            <button onClick={acceptEssential} style={{
+              padding: "12px 24px", background: "#fff", color: "#000091",
+              border: "1px solid #000091", borderRadius: "4px", cursor: "pointer", fontWeight: "500", fontSize: "14px"
+            }}>
               Cookies essentiels uniquement
             </button>
-            <button
-              onClick={acceptAll}
-              style={{
-                padding: "12px 24px",
-                background: "#000091",
-                color: "#fff",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontWeight: "500",
-                fontSize: "14px"
-              }}
-            >
+            <button onClick={acceptAll} style={{
+              padding: "12px 24px", background: "#000091", color: "#fff",
+              border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "500", fontSize: "14px"
+            }}>
               Accepter tout
             </button>
           </div>
@@ -152,40 +183,942 @@ function CookieBanner() {
   );
 }
 
+// ==========================================
+// PDF GENERATION
+// ==========================================
+const generatePDFReport = async (analysisData, fileName) => {
+  const { default: jsPDF } = await import('jspdf');
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = 20;
+
+  const addText = (text, x, currentY, options = {}) => {
+    const { fontSize = 12, fontStyle = 'normal', color = [0, 0, 0], maxWidth = pageWidth - 40 } = options;
+    doc.setFontSize(fontSize);
+    doc.setFont('helvetica', fontStyle);
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(text, maxWidth);
+    lines.forEach(line => {
+      if (currentY > 275) {
+        doc.addPage();
+        currentY = 20;
+      }
+      doc.text(line, x, currentY);
+      currentY += fontSize * 0.5;
+    });
+    return currentY;
+  };
+
+  const addSection = (title, currentY) => {
+    if (currentY > 260) { doc.addPage(); currentY = 20; }
+    currentY += 5;
+    doc.setDrawColor(0, 0, 145);
+    doc.setLineWidth(0.5);
+    doc.line(20, currentY, pageWidth - 20, currentY);
+    currentY += 8;
+    currentY = addText(title, 20, currentY, { fontSize: 14, fontStyle: 'bold', color: [0, 0, 145] });
+    currentY += 3;
+    return currentY;
+  };
+
+  // Header
+  doc.setFillColor(0, 0, 145);
+  doc.rect(0, 0, pageWidth, 35, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CheckTonBail - Rapport d\'analyse', 20, 22);
+  doc.setFontSize(10);
+  doc.text(`Fichier: ${fileName} | Date: ${new Date().toLocaleDateString('fr-FR')}`, 20, 30);
+  y = 45;
+
+  const a = analysisData;
+
+  // Clauses abusives
+  if (a.clauses_abusives?.length > 0) {
+    y = addSection(`CLAUSES ABUSIVES (${a.clauses_abusives.length})`, y);
+    a.clauses_abusives.forEach((clause, i) => {
+      y = addText(`${i + 1}. ${clause.extrait}`, 22, y, { fontStyle: 'italic', color: [180, 0, 0] });
+      y = addText(`Probleme: ${clause.probleme}`, 26, y, { fontSize: 10 });
+      y = addText(`Base legale: ${clause.base_legale}`, 26, y, { fontSize: 10, color: [100, 100, 100] });
+      y = addText(`Recommandation: ${clause.recommandation}`, 26, y, { fontSize: 10, color: [0, 100, 0] });
+      y += 4;
+    });
+  }
+
+  // Clauses desequilibrees
+  if (a.clauses_desequilibrees?.length > 0) {
+    y = addSection(`CLAUSES DESEQUILIBREES (${a.clauses_desequilibrees.length})`, y);
+    a.clauses_desequilibrees.forEach((clause, i) => {
+      y = addText(`${i + 1}. ${clause.extrait}`, 22, y, { fontStyle: 'italic', color: [200, 120, 0] });
+      y = addText(`Probleme: ${clause.probleme}`, 26, y, { fontSize: 10 });
+      y = addText(`Recommandation: ${clause.recommandation}`, 26, y, { fontSize: 10, color: [0, 100, 0] });
+      y += 4;
+    });
+  }
+
+  // Points a surveiller
+  if (a.points_a_surveiller?.length > 0) {
+    y = addSection(`POINTS A SURVEILLER (${a.points_a_surveiller.length})`, y);
+    a.points_a_surveiller.forEach((point, i) => {
+      y = addText(`${i + 1}. ${point.extrait}`, 22, y, { fontStyle: 'italic' });
+      y = addText(`Explication: ${point.explication}`, 26, y, { fontSize: 10 });
+      y = addText(`Recommandation: ${point.recommandation}`, 26, y, { fontSize: 10, color: [0, 100, 0] });
+      y += 4;
+    });
+  }
+
+  // Elements favorables
+  if (a.elements_favorables_locataire?.length > 0) {
+    y = addSection(`ELEMENTS FAVORABLES (${a.elements_favorables_locataire.length})`, y);
+    a.elements_favorables_locataire.forEach((elem, i) => {
+      y = addText(`${i + 1}. ${elem.extrait}`, 22, y, { color: [0, 120, 0] });
+      y = addText(`${elem.pourquoi_c_est_favorable}`, 26, y, { fontSize: 10 });
+      y += 4;
+    });
+  }
+
+  // Impact caution
+  if (a.impact_sur_caution) {
+    y = addSection('IMPACT SUR LA CAUTION', y);
+    y = addText(`Risque: ${a.impact_sur_caution.risque_perte_caution}`, 22, y, { fontStyle: 'bold' });
+    y = addText(a.impact_sur_caution.explication, 22, y, { fontSize: 10 });
+    if (a.impact_sur_caution.actions_concretes_pour_proteger_la_caution) {
+      y += 2;
+      y = addText('Actions concretes:', 22, y, { fontStyle: 'bold', fontSize: 10 });
+      a.impact_sur_caution.actions_concretes_pour_proteger_la_caution.forEach(action => {
+        y = addText(`- ${action}`, 26, y, { fontSize: 10 });
+      });
+    }
+  }
+
+  // Recommandations
+  if (a.recommandations_generales?.length > 0) {
+    y = addSection('RECOMMANDATIONS GENERALES', y);
+    a.recommandations_generales.forEach(rec => {
+      y = addText(`- ${rec}`, 22, y, { fontSize: 10 });
+    });
+  }
+
+  // Resume
+  if (a.resume_simple) {
+    y = addSection('RESUME', y);
+    y = addText(a.resume_simple, 22, y, { fontSize: 11 });
+  }
+
+  // Footer
+  if (y > 260) { doc.addPage(); y = 20; }
+  y += 10;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(20, y, pageWidth - 20, y);
+  y += 6;
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text('Ce rapport est genere automatiquement par CheckTonBail. Il ne constitue pas un avis juridique.', 20, y);
+  y += 4;
+  doc.text('www.check-ton-bail.fr | checkTonBail@outlook.com', 20, y);
+
+  doc.save(`CheckTonBail-Rapport-${fileName.replace('.pdf', '')}.pdf`);
+};
+
+// ==========================================
+// COMPOSANT PRINCIPAL AnalyseBail
+// ==========================================
+function AnalyseBail({ userId, t }) {
+  // Tunnel state
+  const [currentStep, setCurrentStep] = useState('upload');
+  const [file, setFile] = useState(null);
+  const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [serverReady, setServerReady] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+
+  // Analysis data
+  const [extractedText, setExtractedText] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [analysisFileName, setAnalysisFileName] = useState("");
+
+  // Payment state
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState(null);
+  const [checkoutSessionId, setCheckoutSessionId] = useState(null);
+
+  // Stats
+  // eslint-disable-next-line no-unused-vars
+  const [publicStats, setPublicStats] = useState({ totalAnalyses: 247, totalClausesDetected: 312 });
+
+  // FAQ
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
+
+  // Warm-up server
+  useEffect(() => {
+    const warmUp = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/health`, { method: 'GET', signal: AbortSignal.timeout(60000) });
+        if (res.ok) setServerReady(true);
+      } catch {
+        setTimeout(warmUp, 5000);
+      }
+    };
+    warmUp();
+  }, []);
+
+  // Fetch public stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/public-stats`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.totalAnalyses) setPublicStats(data);
+        }
+      } catch { /* silently fail */ }
+    };
+    fetchStats();
+  }, []);
+
+  // Handle return from Stripe 3D Secure / redirect
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    if (!sessionId) return;
+
+    const handleReturn = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/checkout-session-status?session_id=${sessionId}`);
+        const data = await res.json();
+
+        if (data.payment_status === 'paid') {
+          // Restore from sessionStorage
+          const savedText = sessionStorage.getItem(SS_KEYS.extractedText);
+          const savedFileName = sessionStorage.getItem(SS_KEYS.fileName);
+
+          if (savedText) {
+            setCurrentStep('analyzing');
+
+            const analysisRes = await fetch(`${API_BASE}/api/analyse-bail-text`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                bailText: savedText,
+                fileName: savedFileName || "bail.pdf",
+                userId,
+                checkoutSessionId: sessionId,
+                country: 'FR'
+              })
+            });
+
+            const analysisData = await analysisRes.json();
+            if (analysisData.success) {
+              setAnalysis(analysisData);
+              setAnalysisFileName(analysisData.fileName || savedFileName || "bail.pdf");
+              setCurrentStep('report');
+      trackEvent('purchase', { event_category: 'conversion', value: PRICE_NUMERIC, currency: 'EUR' });
+            } else {
+              setError(analysisData.error || "Erreur lors de l'analyse");
+              setCurrentStep('upload');
+            }
+          }
+        }
+      } catch (err) {
+        setError("Erreur lors de la v\u00e9rification du paiement");
+        setCurrentStep('upload');
+      }
+
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    };
+
+    handleReturn();
+  }, [userId]);
+
+  // File handling
+  const processFile = (selectedFile) => {
+    if (selectedFile.type !== "application/pdf") {
+      setError(t('errorFileType'));
+      return;
+    }
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setError(t('errorFileSize'));
+      return;
+    }
+    setFile(selectedFile);
+    setError("");
+    trackEvent('file_upload', { event_category: 'engagement', file_size: Math.round(selectedFile.size / 1024) });
+  };
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) processFile(selectedFile);
+  };
+
+  const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); };
+  const handleDragLeave = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); };
+  const handleDrop = (e) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile) processFile(droppedFile);
+  };
+
+  // Start: extract text then go to payment
+  const handleStartAnalysis = async () => {
+    if (!file) { setError(t('errorNoFile')); return; }
+
+    setError("");
+    setCurrentStep('preparing');
+
+    try {
+      // Step 1: extract text from PDF
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const prepRes = await fetch(`${API_BASE}/api/prepare-analysis`, {
+        method: "POST",
+        body: formData,
+      });
+      const prepData = await prepRes.json();
+
+      if (!prepRes.ok || !prepData.success) {
+        throw new Error(prepData.error || t('errorUnknown'));
+      }
+
+      const text = prepData.extractedText;
+      const fileName = prepData.fileName || file.name || "bail.pdf";
+
+      // Save to sessionStorage for post-payment recovery
+      sessionStorage.setItem(SS_KEYS.extractedText, text);
+      sessionStorage.setItem(SS_KEYS.fileName, fileName);
+      if (userEmail) sessionStorage.setItem(SS_KEYS.userEmail, userEmail);
+      setExtractedText(text);
+      setAnalysisFileName(fileName);
+
+      trackEvent('begin_checkout', { event_category: 'funnel', value: PRICE_NUMERIC, currency: 'EUR' });
+
+      // Step 2: create checkout session
+      const checkoutRes = await fetch(`${API_BASE}/api/create-checkout-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, email: userEmail || undefined })
+      });
+      const checkoutData = await checkoutRes.json();
+
+      if (checkoutData.success && checkoutData.clientSecret) {
+        setCheckoutClientSecret(checkoutData.clientSecret);
+        setCheckoutSessionId(checkoutData.sessionId);
+        setCurrentStep('payment');
+      } else {
+        throw new Error("Erreur lors de l'initialisation du paiement");
+      }
+    } catch (err) {
+      setError(err.message || t('errorServer'));
+      setCurrentStep('upload');
+    }
+  };
+
+  // Handle checkout complete
+  const handleCheckoutComplete = useCallback(async () => {
+    setCurrentStep('analyzing');
+
+    try {
+      if (!extractedText) {
+        setError("Texte du bail manquant. Veuillez r\u00e9analyser le document.");
+        setCurrentStep('upload');
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/api/analyse-bail-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bailText: extractedText,
+          fileName: analysisFileName,
+          userId,
+          checkoutSessionId: checkoutSessionId,
+          country: 'FR'
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || t('errorUnknown'));
+      }
+
+      setAnalysis(data);
+      setAnalysisFileName(data.fileName || analysisFileName);
+      setCurrentStep('report');
+      trackEvent('purchase', { event_category: 'conversion', value: PRICE_NUMERIC, currency: 'EUR' });
+    } catch (err) {
+      setError(err.message || t('errorUnknown'));
+      setCurrentStep('upload');
+    }
+  }, [extractedText, analysisFileName, userId, checkoutSessionId, t]);
+
+  // Reset
+  const handleReset = () => {
+    setCurrentStep('upload');
+    setFile(null);
+    setExtractedText(null);
+    setAnalysis(null);
+    setAnalysisFileName("");
+    setCheckoutClientSecret(null);
+    setCheckoutSessionId(null);
+    setError("");
+  };
+
+  // ==========================================
+  // STEP 2: PREPARING (extraction PDF)
+  // ==========================================
+  if (currentStep === 'preparing') {
+    return (
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: "#f5f5fe", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px"
+      }}>
+        <div style={{
+          width: "60px", height: "60px", border: "4px solid #e5e5e5",
+          borderTop: "4px solid #000091", borderRadius: "50%",
+          animation: "spin 1s linear infinite", marginBottom: "2rem"
+        }} />
+        <p style={{ color: "#000091", fontSize: "1.2rem", fontWeight: "bold" }}>
+          Préparation de votre analyse...
+        </p>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // STEP 3: ANALYZING (after payment)
+  // ==========================================
+  if (currentStep === 'analyzing') {
+    return (
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: "#f5f5fe", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px"
+      }}>
+        <div style={{
+          width: "60px", height: "60px", border: "4px solid #e5e5e5",
+          borderTop: "4px solid #000091", borderRadius: "50%",
+          animation: "spin 1s linear infinite", marginBottom: "2rem"
+        }} />
+        <p style={{ color: "#000091", fontSize: "1.2rem", fontWeight: "bold" }}>
+          {t('analyzingProgress')}
+        </p>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // STEP 4: PAYMENT
+  // ==========================================
+  if (currentStep === 'payment' && checkoutClientSecret) {
+    return (
+      <div className="fr-grid-row fr-grid-row--center">
+        <div className="fr-col-12 fr-col-lg-8">
+          <button
+            className="fr-btn fr-btn--tertiary-no-outline fr-mb-4w"
+            onClick={() => setCurrentStep('upload')}
+          >
+            &larr; Retour
+          </button>
+
+          <h2 style={{ textAlign: "center", marginBottom: "0.5rem" }}>{t('paymentTitle')}</h2>
+          <p style={{ textAlign: "center", color: "#666", marginBottom: "2rem" }}>
+            {t('paymentReassurance')}
+          </p>
+
+          <div style={{
+            background: "#fff", borderRadius: "12px", padding: "2rem",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.08)", maxWidth: "600px", margin: "0 auto"
+          }}>
+            <EmbeddedCheckoutProvider
+              stripe={getStripe()}
+              options={{
+                clientSecret: checkoutClientSecret,
+                onComplete: handleCheckoutComplete
+              }}
+            >
+              <EmbeddedCheckout />
+            </EmbeddedCheckoutProvider>
+          </div>
+
+          <div style={{
+            display: "flex", justifyContent: "center", gap: "2rem",
+            marginTop: "2rem", flexWrap: "wrap"
+          }}>
+            {[t('trustPayment'), t('trustDelete'), t('trustRefund')].map((text, i) => (
+              <span key={i} style={{ color: "#666", fontSize: "0.85rem" }}>
+                {["&#x1F512;", "&#x1F5D1;", "&#x2705;"][i]} {text}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // STEP 5: REPORT
+  // ==========================================
+  if (currentStep === 'report' && analysis) {
+    const a = analysis.analysis;
+
+    return (
+      <div className="fr-grid-row fr-grid-row--center">
+        <div className="fr-col-12 fr-col-lg-10">
+          <button
+            className="fr-btn fr-btn--tertiary-no-outline fr-mb-4w"
+            onClick={handleReset}
+          >
+            &larr; {t('newAnalysis')}
+          </button>
+
+          <div className="fr-callout fr-callout--green-emeraude fr-mb-4w">
+            <h2 className="fr-callout__title">{t('resultsTitle')}</h2>
+            <p>Fichier : {analysisFileName}</p>
+          </div>
+
+          {/* Download PDF */}
+          <div style={{ textAlign: "right", marginBottom: "1.5rem" }}>
+            <button
+              className="fr-btn fr-btn--secondary"
+              onClick={() => generatePDFReport(a, analysisFileName)}
+            >
+              {t('downloadReport')}
+            </button>
+          </div>
+
+          {/* Clauses abusives */}
+          {a.clauses_abusives?.length > 0 && (
+            <div className="fr-mb-4w">
+              <h3>{t('abusiveClauses')} ({a.clauses_abusives.length})</h3>
+              {a.clauses_abusives.map((clause, i) => (
+                <div key={i} className="fr-alert fr-alert--error fr-mb-2w">
+                  <p><strong>{t('problem')} :</strong> {clause.probleme}</p>
+                  <p style={{ fontStyle: "italic", color: "#666" }}>"{clause.extrait}"</p>
+                  <p><strong>{t('legalBasis')} :</strong> {clause.base_legale}</p>
+                  <p><strong>{t('recommendation')} :</strong> {clause.recommandation}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Clauses desequilibrees */}
+          {a.clauses_desequilibrees?.length > 0 && (
+            <div className="fr-mb-4w">
+              <h3>{t('unbalancedClauses')} ({a.clauses_desequilibrees.length})</h3>
+              {a.clauses_desequilibrees.map((clause, i) => (
+                <div key={i} className="fr-alert fr-alert--warning fr-mb-2w">
+                  <p><strong>{t('problem')} :</strong> {clause.probleme}</p>
+                  <p style={{ fontStyle: "italic", color: "#666" }}>"{clause.extrait}"</p>
+                  <p><strong>{t('recommendation')} :</strong> {clause.recommandation}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Points a surveiller */}
+          {a.points_a_surveiller?.length > 0 && (
+            <div className="fr-mb-4w">
+              <h3>{t('watchPoints')} ({a.points_a_surveiller.length})</h3>
+              {a.points_a_surveiller.map((point, i) => (
+                <div key={i} className="fr-alert fr-alert--info fr-mb-2w">
+                  <p style={{ fontStyle: "italic", color: "#666" }}>"{point.extrait}"</p>
+                  <p><strong>{t('explanation')} :</strong> {point.explication}</p>
+                  <p><strong>{t('recommendation')} :</strong> {point.recommandation}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Elements favorables */}
+          {a.elements_favorables_locataire?.length > 0 && (
+            <div className="fr-mb-4w">
+              <h3>{t('favorableElements')} ({a.elements_favorables_locataire.length})</h3>
+              {a.elements_favorables_locataire.map((elem, i) => (
+                <div key={i} className="fr-alert fr-alert--success fr-mb-2w">
+                  <p style={{ fontStyle: "italic" }}>"{elem.extrait}"</p>
+                  <p><strong>{t('whyFavorable')} :</strong> {elem.pourquoi_c_est_favorable}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Impact caution */}
+          {a.impact_sur_caution && (
+            <section className="fr-mb-4w" style={{ background: '#f6f6f6', padding: '1.5rem', borderRadius: '8px' }}>
+              <h3>{t('depositImpact')}</h3>
+              <p>
+                <strong>{t('riskLevel')} : </strong>
+                <span style={{
+                  fontWeight: "bold",
+                  color: a.impact_sur_caution.risque_perte_caution === '\u00e9lev\u00e9' ? '#CE0500'
+                    : a.impact_sur_caution.risque_perte_caution === 'moyen' ? '#B34000' : '#18753C'
+                }}>
+                  {a.impact_sur_caution.risque_perte_caution}
+                </span>
+              </p>
+              <p>{a.impact_sur_caution.explication}</p>
+              {a.impact_sur_caution.actions_concretes_pour_proteger_la_caution?.length > 0 && (
+                <>
+                  <h4>{t('concreteActions')} :</h4>
+                  <ul>
+                    {a.impact_sur_caution.actions_concretes_pour_proteger_la_caution.map((action, i) => (
+                      <li key={i}>{action}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </section>
+          )}
+
+          {/* Recommandations */}
+          {a.recommandations_generales?.length > 0 && (
+            <section className="fr-mb-4w" style={{ background: '#f6f6f6', padding: '1.5rem', borderRadius: '8px' }}>
+              <h3>{t('recommendations')}</h3>
+              <ul>
+                {a.recommandations_generales.map((rec, i) => (
+                  <li key={i}>{rec}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Resume */}
+          <div className="fr-callout">
+            <h3 className="fr-callout__title">{t('simpleSummary')}</h3>
+            <p className="fr-callout__text">{a.resume_simple}</p>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "2rem" }}>
+            <button className="fr-btn fr-btn--secondary" onClick={() => generatePDFReport(a, analysisFileName)}>
+              {t('downloadReport')}
+            </button>
+            <button className="fr-btn" onClick={handleReset}>
+              {t('newAnalysis')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // STEP 1: UPLOAD / LANDING PAGE
+  // ==========================================
+  const faqItems = [
+    { q: t('faqConfidential'), a: t('faqConfidentialAnswer') },
+    { q: t('faqTypes'), a: t('faqTypesAnswer') },
+    { q: t('faqDuration'), a: t('faqDurationAnswer') },
+    { q: t('faqIllegal'), a: t('faqIllegalAnswer') },
+    { q: t('faqRefund'), a: t('faqRefundAnswer') }
+  ];
+
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{
+        padding: "1.5rem 2rem 1rem", marginBottom: "1rem", textAlign: "center"
+      }}>
+        <h1 style={{
+          fontSize: "clamp(1.6rem, 5vw, 2.6rem)", margin: "0 auto 1.2rem",
+          lineHeight: 1.2, fontWeight: "800", maxWidth: "750px",
+          letterSpacing: "-0.02em", color: "#000091"
+        }}>
+          {t('heroTitle')}
+        </h1>
+        <p style={{
+          fontSize: "clamp(1rem, 2.5vw, 1.15rem)", color: "#555",
+          maxWidth: "600px", margin: "0 auto 2.5rem", lineHeight: 1.7,
+          fontWeight: "400"
+        }}>
+          {t('heroSubtitle')}
+        </p>
+
+      </div>
+
+      <div className="fr-grid-row fr-grid-row--center">
+        <div className="fr-col-12 fr-col-md-8 fr-col-lg-6">
+
+
+          {/* Upload zone */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById('file-upload').click()}
+            style={{
+              border: `2px dashed ${isDragging ? '#000091' : file ? '#18753C' : '#cecece'}`,
+              borderRadius: '8px', padding: '2rem', textAlign: 'center',
+              cursor: 'pointer',
+              backgroundColor: isDragging ? '#f5f5fe' : file ? '#b8fec9' : '#fafafa',
+              transition: 'all 0.2s ease', marginBottom: '1rem'
+            }}
+          >
+            <input type="file" id="file-upload" accept=".pdf" onChange={handleFileChange} style={{ display: 'none' }} />
+            {file ? (
+              <>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>&#x2705;</div>
+                <p style={{ fontWeight: "bold", color: '#18753C', marginBottom: '0.5rem' }}>{file.name}</p>
+                <p style={{ color: '#666', fontSize: '0.9rem' }}>{(file.size / 1024 / 1024).toFixed(2)} Mo</p>
+                <p style={{ color: '#666', fontSize: '0.8rem', marginTop: '0.5rem' }}>{t('dropzoneChangeFile')}</p>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>&#x1F4C4;</div>
+                <p style={{ fontWeight: "bold", marginBottom: '0.75rem' }}>
+                  {isDragging ? t('dropzoneTextDragging') : t('dropzoneText')}
+                </p>
+                <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{t('dropzoneClickText')}</p>
+                <p style={{ color: '#666', fontSize: '0.8rem' }}>{t('dropzoneFormat')}</p>
+              </>
+            )}
+          </div>
+
+          {/* Email input */}
+          <div className="fr-mb-3w">
+            <label htmlFor="email-input" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.9rem", color: "#333" }}>
+              {t('emailLabel')}
+            </label>
+            <input
+              type="email"
+              id="email-input"
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+              placeholder={t('emailPlaceholder')}
+              style={{
+                width: "100%", padding: "12px 16px", fontSize: "16px",
+                borderRadius: "4px", border: "1px solid #ccc",
+                boxSizing: "border-box"
+              }}
+            />
+            <p style={{ color: "#666", fontSize: "0.8rem", marginTop: "0.25rem" }}>{t('emailHelp')}</p>
+          </div>
+
+          {error && (
+            <div className="fr-alert fr-alert--error fr-mb-2w"><p>{error}</p></div>
+          )}
+
+          {/* Server warming indicator */}
+          {!serverReady && (
+            <div className="fr-alert fr-alert--info fr-mb-2w">
+              <p>{t('preparingService')}</p>
+            </div>
+          )}
+
+          {/* CTA Button */}
+          <button
+            className="fr-btn fr-btn--lg"
+            onClick={handleStartAnalysis}
+            disabled={!file || !serverReady}
+            style={{ width: "100%", padding: "16px", fontSize: "1.1rem" }}
+          >
+            {!serverReady ? t('preparingButton') : t('analyzeButton')}
+          </button>
+        </div>
+      </div>
+
+      {/* Pourquoi CheckTonBail — full-width band */}
+      <div style={{ background: "#f5f5fe", margin: "3rem -2rem 0", padding: "3rem 2rem" }}>
+        <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "3rem", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 300px" }}>
+              <h2 style={{ color: "#000091", marginTop: 0 }}>Pourquoi analyser votre bail ?</h2>
+              <p style={{ fontSize: "1.05rem", lineHeight: 1.8, color: "#333" }}>
+                En France, <strong>plus de 50% des baux</strong> contiennent au moins une clause abusive ou ill&eacute;gale.
+                Ces clauses sont r&eacute;put&eacute;es non &eacute;crites par la loi, mais encore faut-il les identifier.
+              </p>
+              <p style={{ fontSize: "1.05rem", lineHeight: 1.8, color: "#333" }}>
+                CheckTonBail analyse chaque clause de votre contrat et vous signale celles qui ne respectent pas la loi.
+              </p>
+            </div>
+          </div>
+          <div className="fr-grid-row fr-grid-row--gutters" style={{ marginTop: "1.5rem", justifyContent: "center" }}>
+            {[
+              { num: publicStats.totalAnalyses, label: "baux analys\u00e9s" },
+              { num: publicStats.totalClausesDetected, label: "clauses d\u00e9tect\u00e9es" },
+              { num: "100%", label: "base l\u00e9gale cit\u00e9e" }
+            ].map((stat, i) => (
+              <div key={i} className="fr-col-4">
+                <div style={{
+                  background: "#fff", borderRadius: "8px", padding: "2rem 1.5rem",
+                  textAlign: "center", border: "1px solid #e5e5e5"
+                }}>
+                  <div style={{ fontSize: "1.3rem", fontWeight: "800", color: "#000091" }}>{stat.num}</div>
+                  <div style={{ fontSize: "0.8rem", color: "#666" }}>{stat.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 5 clauses illegales — grid layout */}
+      <div className="fr-container" style={{ margin: "3rem auto" }}>
+        <h2 style={{ textAlign: "center", color: "#000091", marginBottom: "2rem" }}>
+          Les 5 clauses ill&eacute;gales les plus courantes
+        </h2>
+        <div className="fr-grid-row fr-grid-row--gutters">
+          {[
+            { icon: "fr-icon-money-euro-circle-line", title: "D\u00e9p\u00f4t de garantie excessif", desc: "Le d\u00e9p\u00f4t ne peut pas d\u00e9passer 1 mois de loyer (vide) ou 2 mois (meubl\u00e9). Tout montant sup\u00e9rieur est ill\u00e9gal." },
+            { icon: "fr-icon-file-text-line", title: "Frais de quittance de loyer", desc: "Le bailleur ne peut pas facturer l'envoi des quittances. C'est une obligation gratuite pr\u00e9vue par la loi." },
+            { icon: "fr-icon-home-4-line", title: "Interdiction d'h\u00e9berger", desc: "Le bailleur ne peut pas interdire au locataire d'h\u00e9berger des membres de sa famille ou des proches." },
+            { icon: "fr-icon-time-line", title: "P\u00e9nalit\u00e9s de retard", desc: "Les clauses pr\u00e9voyant des p\u00e9nalit\u00e9s forfaitaires ou des int\u00e9r\u00eats de retard sont ill\u00e9gales." },
+            { icon: "fr-icon-tools-line", title: "Travaux \u00e0 charge du locataire", desc: "Les grosses r\u00e9parations (toiture, fa\u00e7ade, plomberie) sont \u00e0 la charge du propri\u00e9taire." }
+          ].map((clause, i) => (
+            <div key={i} className="fr-col-12 fr-col-md-6">
+              <div className="fr-card fr-card--vertical fr-mb-2w ctb-card-illegal">
+                <div className="fr-card__body">
+                  <div className="fr-card__content">
+                    <h3 className="fr-card__title fr-h6">{clause.title}</h3>
+                    <div className="fr-card__start">
+                      <ul className="fr-badges-group">
+                        <li><p className="fr-badge fr-badge--error">Clause ill&eacute;gale</p></li>
+                      </ul>
+                    </div>
+                    <div className="fr-card__end">
+                      <p className="fr-card__detail">{clause.desc}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Ce que contient le rapport — full-width band + liste features */}
+      <div style={{ background: "#f5f5fe", margin: "0 -2rem", padding: "3rem 2rem" }}>
+        <div className="fr-container">
+          <h2 style={{ textAlign: "center", color: "#000091", marginTop: 0, marginBottom: "2rem" }}>
+            Ce que contient votre rapport
+          </h2>
+          <div className="fr-grid-row fr-grid-row--gutters">
+            {[
+              { icon: "fr-icon-alert-fill",              title: "Clauses abusives",        desc: "Chaque clause ill\u00e9gale identifi\u00e9e avec la r\u00e9f\u00e9rence de loi pr\u00e9cise" },
+              { icon: "fr-icon-warning-line",             title: "Clauses d\u00e9s\u00e9quilibr\u00e9es",  desc: "Les clauses l\u00e9gales mais d\u00e9favorables au locataire" },
+              { icon: "fr-icon-eye-line",              title: "Points \u00e0 surveiller",   desc: "Les zones d'attention \u00e0 conna\u00eetre avant de signer" },
+              { icon: "fr-icon-thumb-up-line",            title: "\u00c9l\u00e9ments favorables",  desc: "Ce qui vous prot\u00e8ge dans votre bail" },
+              { icon: "fr-icon-shield-line",              title: "Impact sur la caution",   desc: "Risque de perte du d\u00e9p\u00f4t de garantie et actions concr\u00e8tes" },
+              { icon: "fr-icon-download-line",            title: "Rapport PDF",             desc: "T\u00e9l\u00e9chargeable et partageable avec votre propri\u00e9taire" }
+            ].map((item, i) => (
+              <div key={i} className="fr-col-12 fr-col-md-6">
+                <div className="ctb-feature">
+                  <span className={`${item.icon} fr-icon--lg ctb-feature__icon`} aria-hidden="true"></span>
+                  <div className="ctb-feature__body">
+                    <p className="ctb-feature__title">{item.title}</p>
+                    <p className="ctb-feature__desc">{item.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Temoignages — 3 columns */}
+      <div style={{ maxWidth: "1000px", margin: "3rem auto", padding: "0 1rem" }}>
+        <h2 style={{ textAlign: "center", color: "#000091", marginBottom: "2rem" }}>
+          Ils ont analys&eacute; leur bail
+        </h2>
+        <div className="testimonials-scroll">
+          {[
+            {
+              name: "Marie L.",
+              city: "Paris",
+              text: "Mon propri\u00e9taire demandait 2 mois de caution pour un logement vide. Gr\u00e2ce \u00e0 CheckTonBail, j'ai su que c'\u00e9tait ill\u00e9gal et j'ai obtenu la r\u00e9duction \u00e0 1 mois."
+            },
+            {
+              name: "Thomas R.",
+              city: "Lyon",
+              text: "3 clauses abusives d\u00e9tect\u00e9es dans mon bail, dont des frais de quittance. J'ai montr\u00e9 le rapport \u00e0 mon bailleur qui les a retir\u00e9es sans discuter."
+            },
+            {
+              name: "Sophie M.",
+              city: "Bordeaux",
+              text: "Avant de signer, j'ai fait analyser le bail. R\u00e9sultat : une clause obligeait \u00e0 repeindre l'appartement en sortant, m\u00eame apr\u00e8s 6 mois. Clause supprim\u00e9e avant la signature."
+            }
+          ].map((avis, i) => (
+            <div key={i} style={{
+              background: "#fff", border: "1px solid #e5e5e5", borderRadius: "8px",
+              padding: "1.5rem", display: "flex", flexDirection: "column", justifyContent: "space-between"
+            }}>
+              <p style={{ fontStyle: "italic", color: "#333", lineHeight: 1.7, margin: "0 0 1rem", fontSize: "0.95rem" }}>
+                &laquo; {avis.text} &raquo;
+              </p>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#666", fontWeight: "600" }}>
+                {avis.name} &mdash; {avis.city}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Second CTA — full-width band */}
+      <div style={{ background: "#000091", margin: "0 -2rem", padding: "3rem 2rem", textAlign: "center" }}>
+        <h2 style={{ color: "#fff", marginTop: 0, marginBottom: "0.5rem", fontSize: "1.4rem" }}>
+          Pr&ecirc;t &agrave; analyser votre bail ?
+        </h2>
+        <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "1.5rem", fontSize: "1rem" }}>
+          D&eacute;tectez les clauses ill&eacute;gales de votre bail
+        </p>
+        <button
+          className="fr-btn fr-btn--lg"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            padding: "16px 40px", fontSize: "1.1rem",
+            background: "#fff", color: "#000091", border: "none", fontWeight: "700"
+          }}
+        >
+          Analyser mon bail - {PRICE}
+        </button>
+      </div>
+
+      {/* FAQ — wider */}
+      <div style={{ maxWidth: "900px", margin: "3rem auto", padding: "0 1rem" }}>
+        <h2 style={{ textAlign: "center", marginBottom: "1.5rem", color: "#000091" }}>FAQ</h2>
+        {faqItems.map((item, index) => (
+          <div key={index} style={{ marginBottom: '10px' }}>
+            <button
+              onClick={() => setOpenFaqIndex(openFaqIndex === index ? null : index)}
+              style={{
+                width: '100%', textAlign: 'left', padding: '14px 18px',
+                background: openFaqIndex === index ? '#000091' : '#fff',
+                color: openFaqIndex === index ? '#fff' : '#000',
+                border: '1px solid #ddd',
+                borderRadius: openFaqIndex === index ? '8px 8px 0 0' : '8px',
+                cursor: 'pointer', fontSize: '15px', fontWeight: 600,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}
+            >
+              <span>{item.q}</span>
+              <span style={{ fontSize: '18px' }}>{openFaqIndex === index ? '\u2212' : '+'}</span>
+            </button>
+            {openFaqIndex === index && (
+              <div style={{
+                padding: '16px 18px', background: '#f6f6f6',
+                borderRadius: '0 0 8px 8px', border: '1px solid #ddd',
+                borderTop: 'none', lineHeight: 1.7, color: '#333', fontSize: '0.95rem'
+              }}>
+                {item.a}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// APP PRINCIPALE
+// ==========================================
 function App() {
   const [currentPage, setCurrentPage] = useState("analyse");
   const [userId, setUserId] = useState(null);
-  
-  // 🌍 Détection automatique de la langue du navigateur
-  const [language, setLanguage] = useState(() => {
-    // Priorité : localStorage > langue navigateur > français par défaut
-    const savedLang = localStorage.getItem('checktonbail_lang');
-    if (savedLang) return savedLang;
-    
-    // Détecter la langue du navigateur
-    const browserLang = navigator.language || navigator.userLanguage || 'fr';
-    const langCode = browserLang.split('-')[0].toLowerCase(); // 'fr-FR' -> 'fr'
-    
-    // Vérifier si la langue est supportée
-    const supportedLangs = ['fr', 'en', 'es', 'de', 'pt'];
-    return supportedLangs.includes(langCode) ? langCode : 'en'; // Anglais par défaut si non supporté
-  });
-  
-  const [selectedCountry, setSelectedCountry] = useState(() => {
-    return localStorage.getItem('checktonbail_country') || 'FR';
-  });
 
-  // Sauvegarder les préférences
-  useEffect(() => {
-    localStorage.setItem('checktonbail_lang', language);
-  }, [language]);
-
-  useEffect(() => {
-    localStorage.setItem('checktonbail_country', selectedCountry);
-  }, [selectedCountry]);
-
-  // Helper pour les traductions
-  const t = (key) => translations[language]?.[key] || translations['fr'][key] || key;
+  const t = (key) => translations[key] || key;
 
   useEffect(() => {
     let id = localStorage.getItem("checktonbail_userId");
@@ -198,6 +1131,12 @@ function App() {
 
   return (
     <>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+      `}</style>
+
       {/* Header DSFR */}
       <header role="banner" className="fr-header">
         <div className="fr-header__body">
@@ -205,69 +1144,34 @@ function App() {
             <div className="fr-header__body-row">
               <div className="fr-header__brand fr-enlarge-link">
                 <div className="fr-header__brand-top">
-                 <div className="fr-header__logo">
-  <a href="/" title="Accueil - CheckTonBail" style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}>
-    <img
-      src="/logo-checktonbail.svg"
-      alt="CheckTonBail"
-      style={{ height: "40px", width: "40px" }}
-    />
-    <span style={{ fontWeight: 700, fontSize: "20px", color: "#000091" }}>
-      CheckTonBail
-    </span>
-  </a>
-</div>
-
+                  <div className="fr-header__logo">
+                    <a href="/" title="Accueil - CheckTonBail" style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}>
+                      <img src="/logo-checktonbail.svg" alt="CheckTonBail" style={{ height: "40px", width: "40px" }} />
+                      <span style={{ fontWeight: 700, fontSize: "20px", color: "#000091" }}>CheckTonBail</span>
+                    </a>
+                  </div>
                 </div>
-              <div className="fr-header__service">
-  <p className="fr-header__service-tagline">Analysez votre bail en toute confiance</p>
-</div>
-
+                <div className="fr-header__service">
+                  <p className="fr-header__service-tagline">{t('tagline')}</p>
+                </div>
               </div>
               <div className="fr-header__tools">
                 <div className="fr-header__tools-links">
                   <ul className="fr-btns-group" style={{ alignItems: 'center' }}>
-                    {/* Sélecteur de langue - Liste déroulante avec drapeau */}
-                    <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <img 
-                        src={`https://flagcdn.com/24x18/${language === 'en' ? 'gb' : language}.png`}
-                        alt=""
-                        style={{ width: '24px', height: '18px', borderRadius: '2px', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
-                      />
-                      <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: "4px",
-                          border: "1px solid #ddd",
-                          background: "#fff",
-                          cursor: "pointer",
-                          fontSize: "14px"
-                        }}
-                        title="Changer la langue"
-                      >
-                        {LANGUAGES.map(lang => (
-                          <option key={lang.code} value={lang.code}>
-                            {lang.flag} {lang.name}
-                          </option>
-                        ))}
-                      </select>
-                    </li>
                     <li>
-                      <button 
+                      <button
                         className={`fr-btn ${currentPage === "analyse" ? "" : "fr-btn--secondary"}`}
                         onClick={() => setCurrentPage("analyse")}
                       >
-                        {t('analyzeButton').replace('🔍 ', '').replace(' gratuit', '').replace('ement', '').replace(' mon bail', '')}
+                        Analyse
                       </button>
                     </li>
                     <li>
-                      <button 
+                      <button
                         className={`fr-btn ${currentPage === "about" ? "" : "fr-btn--secondary"}`}
                         onClick={() => setCurrentPage("about")}
                       >
-                        À propos
+                        &Agrave; propos
                       </button>
                     </li>
                   </ul>
@@ -282,11 +1186,8 @@ function App() {
       <main role="main" id="content">
         <div className="fr-container fr-py-8w">
           {currentPage === "analyse" && (
-            <AnalyseBail 
-              userId={userId} 
-              language={language}
-              selectedCountry={selectedCountry}
-              setSelectedCountry={setSelectedCountry}
+            <AnalyseBail
+              userId={userId}
               t={t}
             />
           )}
@@ -302,1250 +1203,98 @@ function App() {
       <footer className="fr-footer" role="contentinfo" id="footer">
         <div className="fr-container">
           <div className="fr-footer__body">
-           <div className="fr-footer__brand fr-enlarge-link" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-  <img
-    src="/logo-checktonbail.svg"
-    alt="CheckTonBail"
-    style={{ height: "36px", width: "36px" }}
-  />
-  <div>
-    <div style={{ fontWeight: 700 }}>CheckTonBail</div>
-    <div className="fr-text--xs" style={{ color: "#666" }}>Service privé indépendant</div>
-  </div>
-</div>
-
+            <div className="fr-footer__brand fr-enlarge-link" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <img src="/logo-checktonbail.svg" alt="CheckTonBail" style={{ height: "36px", width: "36px" }} />
+              <div>
+                <div style={{ fontWeight: 700 }}>CheckTonBail</div>
+                <div className="fr-text--xs" style={{ color: "#666" }}>Service priv&eacute; ind&eacute;pendant</div>
+              </div>
+            </div>
             <div className="fr-footer__content">
               <p className="fr-footer__content-desc">
-                CheckTonBail analyse votre bail locatif grâce à l'intelligence artificielle
-                pour détecter les clauses abusives et vous protéger.
+                CheckTonBail analyse votre bail locatif gr&acirc;ce &agrave; l'intelligence artificielle
+                pour d&eacute;tecter les clauses abusives et vous prot&eacute;ger.
               </p>
             </div>
           </div>
           <div className="fr-footer__bottom">
             <ul className="fr-footer__bottom-list">
               <li className="fr-footer__bottom-item">
-                <span className="fr-footer__bottom-link">© {new Date().getFullYear()} CheckTonBail</span>
+                <span className="fr-footer__bottom-link">&copy; {new Date().getFullYear()} CheckTonBail</span>
               </li>
               <li className="fr-footer__bottom-item">
-                <button 
-                  className="fr-footer__bottom-link" 
-                  onClick={() => setCurrentPage("faq")}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  FAQ
-                </button>
+                <button className="fr-footer__bottom-link" onClick={() => setCurrentPage("faq")}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>FAQ</button>
               </li>
               <li className="fr-footer__bottom-item">
-                <button 
-                  className="fr-footer__bottom-link" 
-                  onClick={() => setCurrentPage("mentions")}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  Mentions légales
-                </button>
+                <button className="fr-footer__bottom-link" onClick={() => setCurrentPage("mentions")}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>{t('legalNotice')}</button>
               </li>
               <li className="fr-footer__bottom-item">
-                <button 
-                  className="fr-footer__bottom-link" 
-                  onClick={() => setCurrentPage("cgv")}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  CGV
-                </button>
+                <button className="fr-footer__bottom-link" onClick={() => setCurrentPage("cgv")}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>{t('terms')}</button>
               </li>
               <li className="fr-footer__bottom-item">
-                <button 
-                  className="fr-footer__bottom-link" 
-                  onClick={() => setCurrentPage("confidentialite")}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  Confidentialité
-                </button>
+                <button className="fr-footer__bottom-link" onClick={() => setCurrentPage("confidentialite")}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>{t('privacy')}</button>
               </li>
               <li className="fr-footer__bottom-item">
-                <a href="mailto:checkTonBail@outlook.com" className="fr-footer__bottom-link">
-                  Contact
-                </a>
+                <a href="mailto:checkTonBail@outlook.com" className="fr-footer__bottom-link">{t('contact')}</a>
               </li>
             </ul>
           </div>
         </div>
       </footer>
-
-      {/* Loader fullscreen */}
-      <LoaderOverlay />
     </>
   );
 }
 
-function LoaderOverlay() {
-  return null; // On gère dans chaque composant
-}
-
 // ==========================================
-// 📊 GOOGLE ANALYTICS - Événements & Conversions
+// PAGES STATIQUES
 // ==========================================
-const trackEvent = (eventName, params = {}) => {
-  if (window.gtag) {
-    window.gtag('event', eventName, params);
-    console.log('📊 Analytics:', eventName, params);
-  }
-};
-
-function AnalyseBail({ userId, language = 'fr', selectedCountry = 'FR', setSelectedCountry, t }) {
-  const [file, setFile] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState("");
-  const [analysis, setAnalysis] = useState(null);
-  const [teaser, setTeaser] = useState(null);
-  const [extractedText, setExtractedText] = useState(null);
-  const [error, setError] = useState("");
-  const [isRateLimited, setIsRateLimited] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [clientSecret, setClientSecret] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [serverReady, setServerReady] = useState(false);
-
-  // Helper pour le nom du pays dans la langue courante
-  const getCountryName = (code) => {
-    const country = COUNTRIES.find(c => c.code === code);
-    return country ? `${country.flag} ${country.name[language] || country.name['fr']}` : code;
-  };
-
-  // 🔥 Warm-up du serveur au chargement de la page (évite le cold start Render)
-  useEffect(() => {
-    const warmUpServer = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/health`, { 
-          method: 'GET',
-          signal: AbortSignal.timeout(60000)
-        });
-        if (res.ok) {
-          setServerReady(true);
-        }
-      } catch (err) {
-        // Réessayer après 5s si le serveur n'est pas encore prêt
-        setTimeout(warmUpServer, 5000);
-      }
-    };
-    warmUpServer();
-  }, []);
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0] || null;
-    if (selectedFile) {
-      processFile(selectedFile);
-    }
-  };
-
-  const processFile = (selectedFile) => {
-    if (selectedFile.type !== "application/pdf") {
-      setError("Seuls les fichiers PDF sont acceptés.");
-      return;
-    }
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setError("Le fichier ne doit pas dépasser 10 Mo.");
-      return;
-    }
-    setFile(selectedFile);
-    setAnalysis(null);
-    setTeaser(null);
-    setError("");
-    
-    // 📊 Track: Upload de fichier
-    trackEvent('file_upload', {
-      event_category: 'engagement',
-      event_label: 'PDF uploaded',
-      file_size: Math.round(selectedFile.size / 1024) // en KB
-    });
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      processFile(droppedFile);
-    }
-  };
-
-  const handleTeaserAnalysis = async () => {
-    if (!file) {
-      setError(t ? t('errorNoFile') : "Merci de sélectionner un fichier de bail.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setAnalysis(null);
-    setTeaser(null);
-    setExtractedText(null);
-
-    try {
-      console.log(`🎁 Demande de teaser gratuit pour pays: ${selectedCountry}...`);
-      setProgress(t ? t('analyzingProgress') : "Analyse rapide en cours...");
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('country', selectedCountry); // 🌍 Envoyer le pays sélectionné
-
-      const res = await fetch(`${API_BASE}/api/analyse-teaser`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      
-      // Vérifier le rate limiting
-      if (data.rateLimited) {
-        setProgress("");
-        setError(data.error || "Vous avez atteint la limite d'analyses gratuites. Passez à l'analyse complète !");
-        setIsRateLimited(true);
-        // On garde le fichier pour permettre le paiement direct
-        return;
-      }
-      
-      // Vérifier si ce n'est pas un bail
-      if (data.isNotBail) {
-        setProgress("");
-        setError(data.message || "Ce document ne semble pas être un bail d'habitation.");
-        setFile(null);
-        return;
-      }
-      
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Erreur lors de l'analyse");
-      }
-
-      setProgress("");
-      setIsRateLimited(false);
-      setTeaser(data);
-      
-      // 📊 Track: Teaser affiché (aperçu gratuit)
-      trackEvent('teaser_displayed', {
-        event_category: 'funnel',
-        event_label: 'Free preview shown',
-        clauses_count: data.analyse?.clauses_problematiques?.length || 0
-      });
-      
-      if (data.extractedText) {
-        setExtractedText(data.extractedText);
-        console.log("📝 Texte extrait stocké:", data.extractedText.length, "caractères");
-      }
-      if (data.remaining !== undefined) {
-        console.log(`📊 Analyses gratuites restantes: ${data.remaining}`);
-      }
-    } catch (err) {
-      console.error(err);
-      setProgress("");
-      setError(err.message || "Erreur inconnue");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const runPaidAnalysis = async (paymentIntentId) => {
-    console.log("🚀 runPaidAnalysis appelé, paymentIntentId:", paymentIntentId);
-    
-    setShowPaymentModal(false);
-    setClientSecret(null);
-    
-    if (!extractedText) {
-      setError("Texte du bail manquant. Veuillez réanalyser le document.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setProgress("Paiement validé ! Analyse complète  en cours...");
-
-    try {
-      const res = await fetch(`${API_BASE}/api/analyse-bail-text`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bailText: extractedText,
-          fileName: teaser?.fileName || file?.name || "bail.pdf",
-          userId,
-          paymentIntentId,
-          country: selectedCountry // 🌍 Envoyer le pays sélectionné
-        })
-      });
-
-      const data = await res.json();
-      
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Erreur lors de l'analyse");
-      }
-
-      console.log("✅ Analyse payante terminée !");
-      setProgress("");
-      setAnalysis(data);
-      setTeaser(null);
-      
-      // 📊 Track: Conversion - Analyse complète affichée
-      trackEvent('purchase', {
-        event_category: 'conversion',
-        event_label: 'Full analysis displayed',
-        value: 1.99,
-        currency: 'EUR',
-        transaction_id: data.paymentIntentId || 'unknown'
-      });
-      
-    } catch (err) {
-      console.error(err);
-      setProgress("");
-      setError(err.message || "Erreur inconnue");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenPayment = async () => {
-    if (!file || !userId) {
-      setError("Erreur: fichier ou utilisateur non identifié");
-      return;
-    }
-    
-    // 📊 Track: Clic sur bouton paiement
-    trackEvent('begin_checkout', {
-      event_category: 'funnel',
-      event_label: 'Payment button clicked',
-      value: 1.99,
-      currency: 'EUR'
-    });
-
-    try {
-      const res = await fetch(`${API_BASE}/api/create-payment-intent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId })
-      });
-
-      const data = await res.json();
-      if (data.success && data.clientSecret) {
-        setClientSecret(data.clientSecret);
-        setShowPaymentModal(true);
-      } else {
-        setError("Erreur lors de l'initialisation du paiement");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Erreur de connexion au serveur");
-    }
-  };
-
-  // Paiement direct (sans teaser, pour les utilisateurs rate limited)
-  const handleOpenPaymentDirect = async () => {
-    if (!file || !userId) {
-      setError("Erreur: fichier ou utilisateur non identifié");
-      return;
-    }
-
-    try {
-      const res = await fetch(`${API_BASE}/api/create-payment-intent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId })
-      });
-
-      const data = await res.json();
-      if (data.success && data.clientSecret) {
-        setClientSecret(data.clientSecret);
-        setShowPaymentModal(true);
-      } else {
-        setError("Erreur lors de l'initialisation du paiement");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Erreur de connexion au serveur");
-    }
-  };
-
-  // Analyse payante directe (avec OCR car pas de teaser préalable)
-  const runPaidAnalysisDirect = async (paymentIntentId) => {
-    console.log("🚀 runPaidAnalysisDirect appelé (avec OCR), paymentIntentId:", paymentIntentId);
-    
-    setShowPaymentModal(false);
-    setClientSecret(null);
-    
-    if (!file) {
-      setError("Fichier manquant. Veuillez réessayer.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setProgress("Paiement validé ! Extraction du texte en cours...");
-
-    try {
-      // Upload du fichier pour analyse complète avec OCR
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', userId);
-      formData.append('paymentIntentId', paymentIntentId);
-
-      const res = await fetch(`${API_BASE}/api/analyse-bail`, {
-        method: "POST",
-        body: formData
-      });
-
-      const data = await res.json();
-      
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Erreur lors de l'analyse");
-      }
-
-      console.log("✅ Analyse payante directe terminée !");
-      setProgress("");
-      setAnalysis(data);
-      setIsRateLimited(false);
-      
-      // 📊 Track: Conversion - Analyse complète affichée (direct)
-      trackEvent('purchase', {
-        event_category: 'conversion',
-        event_label: 'Full analysis displayed (direct)',
-        value: 1.99,
-        currency: 'EUR',
-        transaction_id: paymentIntentId || 'unknown'
-      });
-      
-    } catch (err) {
-      console.error(err);
-      setProgress("");
-      setError(err.message || "Erreur inconnue");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Loader fullscreen avec slides de stats
-  const [slideIndex, setSlideIndex] = useState(0);
-  
-  const loaderSlides = [
-    {
-      emoji: "🏠",
-      stat: "40%",
-      text: "des baux contiennent au moins une clause abusive en France"
-    },
-    {
-      emoji: "💰",
-      stat: "3,9 milliards €",
-      text: "de dépôts de garantie non restitués chaque année en France"
-    },
-    {
-      emoji: "⚖️",
-      stat: "1 locataire sur 4",
-      text: "ne récupère pas l'intégralité de sa caution"
-    },
-    {
-      emoji: "📋",
-      stat: "68%",
-      text: "des locataires ne lisent pas entièrement leur bail avant de signer"
-    },
-    {
-      emoji: "🔍",
-      stat: "2 mois",
-      text: "délai maximum légal pour restituer le dépôt de garantie"
-    },
-    {
-      emoji: "📝",
-      stat: "23 clauses",
-      text: "sont réputées abusives selon la loi ALUR de 2014"
-    }
-  ];
-
-  // Effet pour changer les slides automatiquement
-  useEffect(() => {
-    let interval;
-    if (loading) {
-      interval = setInterval(() => {
-        setSlideIndex(prev => (prev + 1) % loaderSlides.length);
-      }, 3500);
-    }
-    return () => clearInterval(interval);
-  }, [loading, loaderSlides.length]);
-
-  if (loading) {
-    const currentSlide = loaderSlides[slideIndex];
-    return (
-      <div style={{
-        position: "fixed",
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: "#f5f5fe",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 9999,
-        padding: "20px"
-      }}>
-        {/* Spinner */}
-        <div style={{
-          width: "60px",
-          height: "60px",
-          border: "4px solid #e5e5e5",
-          borderTop: "4px solid #000091",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite",
-          marginBottom: "2rem"
-        }}></div>
-        
-        {/* Message de progression */}
-        <p className="fr-text--lg fr-text--bold" style={{ color: "#000091", marginBottom: "2rem" }}>
-          {progress || "Analyse en cours..."}
-        </p>
-
-        {/* Slide de stats animée */}
-        <div style={{
-          backgroundColor: "#fff",
-          borderRadius: "12px",
-          padding: "2.5rem 2rem",
-          maxWidth: "420px",
-          width: "100%",
-          textAlign: "center",
-          boxShadow: "0 4px 20px rgba(0,0,145,0.1)",
-          animation: "fadeIn 0.5s ease-in-out"
-        }}>
-          <div style={{ fontSize: "4rem", marginBottom: "2rem" }}>
-            {currentSlide.emoji}
-          </div>
-          <div style={{ 
-            fontSize: "2.5rem", 
-            fontWeight: "bold", 
-            color: "#000091",
-            marginBottom: "1.5rem"
-          }}>
-            {currentSlide.stat}
-          </div>
-          <p style={{ 
-            color: "#666", 
-            fontSize: "1.1rem",
-            margin: 0,
-            lineHeight: "1.6",
-            padding: "0 1rem"
-          }}>
-            {currentSlide.text}
-          </p>
-        </div>
-
-        {/* Indicateurs de slides */}
-        <div style={{ display: "flex", gap: "8px", marginTop: "1.5rem" }}>
-          {loaderSlides.map((_, i) => (
-            <div 
-              key={i}
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                backgroundColor: i === slideIndex ? "#000091" : "#ccc",
-                transition: "background-color 0.3s"
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Petit message */}
-        <p className="fr-text--xs" style={{ color: "#666", marginTop: "2rem" }}>
-          💡 Le saviez-vous ? CheckTonBail analyse chaque clause de votre contrat.
-        </p>
-      </div>
-    );
-  }
-
-  // === AFFICHAGE UPLOAD ===
-  if (!analysis && !teaser) {
-    return (
-      <div className="fr-grid-row fr-grid-row--center">
-        <div className="fr-col-12 fr-col-md-8 fr-col-lg-6">
-          {/* Hero */}
-          <div className="fr-mb-6w" style={{ textAlign: "center" }}>
-            <h1>{t ? t('heroTitle') : 'Analysez votre bail gratuitement'}</h1>
-            <p className="fr-text--lead">
-              {t ? t('heroSubtitle') : 'Déposez votre bail et découvrez instantanément les clauses problématiques'}
-            </p>
-          </div>
-
-          {/* 🌍 Sélecteur de pays avec drapeaux visibles */}
-          <div className="fr-mb-4w" style={{ 
-            background: '#f5f5fe', 
-            borderRadius: '8px', 
-            padding: '1.5rem',
-            border: '1px solid #ddd'
-          }}>
-            <label htmlFor="country-select" style={{ 
-              display: 'block', 
-              marginBottom: '0.75rem', 
-              fontWeight: '600',
-              color: '#000091',
-              fontSize: '1rem'
-            }}>
-              🌍 {t ? t('selectCountry') : 'Dans quel pays est situé le logement ?'}
-            </label>
-            
-            {/* Sélecteur de pays - Liste déroulante avec drapeau */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img 
-                src={`https://flagcdn.com/48x36/${selectedCountry === 'UK' ? 'gb' : selectedCountry.toLowerCase()}.png`}
-                alt=""
-                style={{ width: '48px', height: '36px', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
-              />
-              <select
-                id="country-select"
-                value={selectedCountry}
-                onChange={(e) => setSelectedCountry(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '12px 16px',
-                  fontSize: '16px',
-                  borderRadius: '4px',
-                  border: '1px solid #ccc',
-                  background: '#fff',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="FR">France</option>
-                <option value="ES">Espagne (España)</option>
-                <option value="PT">Portugal</option>
-                <option value="BE">Belgique</option>
-                <option value="DE">Allemagne (Deutschland)</option>
-                <option value="UK">Royaume-Uni (United Kingdom)</option>
-              </select>
-            </div>
-            
-            <p className="fr-text--xs" style={{ marginTop: '0.75rem', color: '#666' }}>
-              {t ? t('countryHelp') : 'Sélectionnez le pays pour une analyse juridique adaptée aux lois locales'}
-            </p>
-          </div>
-
-          {/* Upload avec Drag & Drop */}
-          <div 
-            className={`drop-zone ${isDragging ? 'drop-zone--active' : ''} ${file ? 'drop-zone--success' : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => document.getElementById('file-upload').click()}
-            style={{
-              border: `2px dashed ${isDragging ? '#000091' : file ? '#18753C' : '#cecece'}`,
-              borderRadius: '8px',
-              padding: '2rem',
-              textAlign: 'center',
-              cursor: 'pointer',
-              backgroundColor: isDragging ? '#f5f5fe' : file ? '#b8fec9' : '#fafafa',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <input
-              type="file"
-              id="file-upload"
-              accept=".pdf"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-            />
-            
-            {file ? (
-              <>
-                <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>✅</div>
-                <p className="fr-text--bold" style={{ color: '#18753C', marginBottom: '0.5rem' }}>
-                  {file.name}
-                </p>
-                <p className="fr-text--sm" style={{ color: '#666' }}>
-                  {(file.size / 1024 / 1024).toFixed(2)} Mo
-                </p>
-                <p className="fr-text--xs" style={{ color: '#666', marginTop: '0.5rem' }}>
-                  Cliquez pour changer de fichier
-                </p>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>📄</div>
-                <p className="fr-text--bold" style={{ marginBottom: '0.75rem' }}>
-                  {isDragging ? 'Déposez votre fichier ici' : 'Glissez-déposez votre bail ici'}
-                </p>
-                <p className="fr-text--sm" style={{ color: '#666', marginBottom: '0.5rem' }}>
-                  ou cliquez pour sélectionner un fichier
-                </p>
-                <p className="fr-text--xs" style={{ color: '#666', marginTop: '0.5rem' }}>
-                  PDF uniquement • 10 Mo max
-                </p>
-              </>
-            )}
-          </div>
-
-          {error && (
-            <div className="fr-alert fr-alert--error fr-mt-2w">
-              <p>{error}</p>
-            </div>
-          )}
-
-          {/* Indicateur serveur en cours de démarrage */}
-          {!serverReady && (
-            <div className="fr-alert fr-alert--info fr-mt-2w" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className="fr-icon-refresh-line" aria-hidden="true" style={{ animation: 'spin 1s linear infinite' }}></span>
-              <p style={{ margin: 0 }}>⏳ Préparation du service d'analyse... (quelques secondes)</p>
-            </div>
-          )}
-
-          {/* Boutons selon l'état */}
-          <div className="fr-mt-4w">
-            {isRateLimited && file ? (
-              <>
-                {/* CTA Paiement direct quand rate limited */}
-                <div className="fr-callout fr-callout--blue-france fr-mb-2w">
-                  <h3 className="fr-callout__title">🔓 Passez à l'analyse complète</h3>
-                  <p className="fr-callout__text">
-                    Vous avez utilisé vos 3 analyses gratuites du jour. 
-                    Obtenez l'analyse détaillée de votre bail avec toutes les clauses problématiques.
-                  </p>
-                </div>
-                <button
-                  className="fr-btn fr-btn--lg"
-                  onClick={handleOpenPaymentDirect}
-                  disabled={loading || !serverReady}
-                  style={{ width: "100%" }}
-                >
-                  💳 Analyser mon bail - 1.99€
-                </button>
-                <p className="fr-text--xs" style={{ textAlign: 'center', marginTop: '0.5rem', color: '#666' }}>
-                  Paiement sécurisé par Stripe
-                </p>
-              </>
-            ) : (
-              <button
-                className="fr-btn fr-btn--lg"
-                onClick={handleTeaserAnalysis}
-                disabled={!file || loading || !serverReady}
-                style={{ width: "100%" }}
-              >
-                {!serverReady ? '⏳ Préparation...' : '🔍 Analyser mon bail gratuitement'}
-              </button>
-            )}
-          </div>
-
-          {/* Callout info */}
-          <div className="fr-callout fr-mt-6w">
-            <h3 className="fr-callout__title">💡 Comment ça marche ?</h3>
-            <p className="fr-callout__text">
-              1. Déposez votre bail au format PDF<br />
-              2. Recevez un aperçu gratuit des points clés<br />
-              3. Débloquez l'analyse complète pour 1.99€
-            </p>
-          </div>
-
-          {/* Modal Paiement (pour rate limited) */}
-          {showPaymentModal && clientSecret && (
-            <div style={{
-              position: "fixed",
-              top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: "rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 9999,
-              padding: "20px"
-            }}>
-              <div style={{
-                backgroundColor: "#fff",
-                padding: "32px",
-                borderRadius: "8px",
-                maxWidth: "500px",
-                width: "100%",
-                position: "relative"
-              }}>
-                <button 
-                  onClick={() => setShowPaymentModal(false)}
-                  style={{
-                    position: "absolute",
-                    top: "16px",
-                    right: "16px",
-                    background: "none",
-                    border: "none",
-                    fontSize: "24px",
-                    cursor: "pointer"
-                  }}
-                >
-                  ✕
-                </button>
-                <h2 className="fr-mb-2w">💳 Paiement sécurisé</h2>
-                <p className="fr-text--lg fr-mb-4w">Analyse complète : <strong>1.99€</strong></p>
-                
-                <Elements stripe={getStripe()} options={{ 
-                  clientSecret, 
-                  appearance: { theme: 'stripe' }
-                }}>
-                  <CheckoutForm 
-                    onSuccess={runPaidAnalysisDirect} 
-                    onCancel={() => setShowPaymentModal(false)} 
-                  />
-                </Elements>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // === AFFICHAGE TEASER ===
-  if (teaser) {
-    const t = teaser.teaser;
-    const riskColor = t.niveau_risque === "élevé" ? "error" : t.niveau_risque === "modéré" ? "warning" : "success";
-    
-    return (
-      <div className="fr-grid-row fr-grid-row--center">
-        <div className="fr-col-12 fr-col-lg-10">
-          {/* Retour */}
-          <button 
-            className="fr-btn fr-btn--tertiary-no-outline fr-mb-4w"
-            onClick={() => { setTeaser(null); setFile(null); }}
-          >
-            ← Analyser un autre bail
-          </button>
-
-          {/* Header teaser */}
-          <div className="fr-callout fr-mb-4w">
-            <h2 className="fr-callout__title">🎁 Aperçu gratuit de votre bail</h2>
-            <p>Fichier : {teaser.fileName}</p>
-            <p style={{ fontSize: '0.9rem', color: '#666' }}>
-              🌍 Analyse juridique : {getCountryName(selectedCountry)}
-            </p>
-          </div>
-
-          {/* Infos clés */}
-          <div className="fr-grid-row fr-grid-row--gutters fr-mb-4w">
-            <div className="fr-col-6 fr-col-md-3">
-              <div className="fr-tile fr-tile--horizontal">
-                <div className="fr-tile__body">
-                  <div className="fr-tile__content">
-                    <h3 className="fr-tile__title" style={{fontSize: "0.9rem"}}>Type de bail</h3>
-                    <p className="fr-tile__desc">{t.type_bail}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="fr-col-6 fr-col-md-3">
-              <div className="fr-tile fr-tile--horizontal">
-                <div className="fr-tile__body">
-                  <div className="fr-tile__content">
-                    <h3 className="fr-tile__title" style={{fontSize: "0.9rem"}}>Loyer mensuel</h3>
-                    <p className="fr-tile__desc">{t.loyer_mensuel}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="fr-col-6 fr-col-md-3">
-              <div className="fr-tile fr-tile--horizontal">
-                <div className="fr-tile__body">
-                  <div className="fr-tile__content">
-                    <h3 className="fr-tile__title" style={{fontSize: "0.9rem"}}>Dépôt garantie</h3>
-                    <p className="fr-tile__desc">{t.depot_garantie}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="fr-col-6 fr-col-md-3">
-              <div className="fr-tile fr-tile--horizontal">
-                <div className="fr-tile__body">
-                  <div className="fr-tile__content">
-                    <h3 className="fr-tile__title" style={{fontSize: "0.9rem"}}>Durée</h3>
-                    <p className="fr-tile__desc">{t.duree_bail}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Score de risque */}
-          <div className={`fr-alert fr-alert--${riskColor} fr-mb-4w`}>
-            <h3 className="fr-alert__title">
-              Niveau de risque : {t.niveau_risque?.toUpperCase()}
-            </h3>
-            <p>
-              {t.nb_clauses_problematiques} clause(s) problématique(s) détectée(s)
-            </p>
-          </div>
-
-          {/* Résumé */}
-          <section className="fr-mb-4w" style={{ 
-            backgroundColor: '#f6f6f6', 
-            padding: '1.5rem', 
-            borderRadius: '8px' 
-          }}>
-            <h3>📋 Résumé de l'analyse</h3>
-            <p>{t.resume}</p>
-          </section>
-
-          {/* Section floutée */}
-          <div className="fr-mb-4w" style={{ 
-            position: "relative", 
-            overflow: "hidden",
-            backgroundColor: '#f6f6f6',
-            padding: '1.5rem',
-            borderRadius: '8px'
-          }}>
-            <div style={{ filter: "blur(5px)", userSelect: "none" }}>
-              <h3>Détail des clauses problématiques</h3>
-              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam...</p>
-              <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur...</p>
-            </div>
-            <div style={{
-              position: "absolute",
-              top: 0, left: 0, right: 0, bottom: 0,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "rgba(255,255,255,0.85)"
-            }}>
-              <span style={{ fontSize: "2.5rem" }}>🔒</span>
-              <p className="fr-text--bold fr-mt-2w">Contenu réservé à l'analyse complète</p>
-            </div>
-          </div>
-
-          {/* Info analyses restantes */}
-          {teaser.remaining !== undefined && (
-            <div className={`fr-alert fr-alert--${teaser.remaining === 0 ? 'warning' : 'info'} fr-mb-4w`}>
-              <p>
-                {teaser.remaining > 0 
-                  ? `📊 Il vous reste ${teaser.remaining} analyse(s) gratuite(s) aujourd'hui.`
-                  : "⚠️ C'était votre dernière analyse gratuite de la journée !"}
-              </p>
-            </div>
-          )}
-
-          {/* CTA Paiement */}
-          <div className="fr-callout fr-callout--blue-france">
-            <h3 className="fr-callout__title">🔓 Débloquer l'analyse complète</h3>
-            <p className="fr-callout__text">
-              Accédez à l'analyse détaillée de chaque clause, aux recommandations personnalisées
-              et aux actions concrètes pour protéger votre caution.
-            </p>
-            <button className="fr-btn fr-btn--lg" onClick={handleOpenPayment}>
-              Obtenir l'analyse complète - 1.99€
-            </button>
-          </div>
-
-          {error && (
-            <div className="fr-alert fr-alert--error fr-mt-4w">
-              <p>{error}</p>
-            </div>
-          )}
-
-          {/* Modal Paiement */}
-          {showPaymentModal && clientSecret && (
-            <div style={{
-              position: "fixed",
-              top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: "rgba(0,0,0,0.5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 9999,
-              padding: "20px"
-            }}>
-              <div style={{
-                backgroundColor: "#fff",
-                padding: "32px",
-                maxWidth: "500px",
-                width: "100%",
-                position: "relative"
-              }}>
-                <button 
-                  onClick={() => setShowPaymentModal(false)}
-                  style={{
-                    position: "absolute",
-                    top: "16px",
-                    right: "16px",
-                    background: "none",
-                    border: "none",
-                    fontSize: "24px",
-                    cursor: "pointer"
-                  }}
-                >
-                  ✕
-                </button>
-                <h2 className="fr-mb-2w">💳 Paiement sécurisé</h2>
-                <p className="fr-text--lg fr-mb-4w">Analyse complète : <strong>1.99€</strong></p>
-                
-                <Elements stripe={getStripe()} options={{ 
-                  clientSecret, 
-                  appearance: { theme: 'stripe' }
-                }}>
-                  <CheckoutForm 
-                    onSuccess={extractedText ? runPaidAnalysis : runPaidAnalysisDirect} 
-                    onCancel={() => setShowPaymentModal(false)} 
-                  />
-                </Elements>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // === AFFICHAGE ANALYSE COMPLÈTE ===
-  if (analysis) {
-    const a = analysis.analysis;
-    
-    return (
-      <div className="fr-grid-row fr-grid-row--center">
-        <div className="fr-col-12 fr-col-lg-10">
-          {/* Retour */}
-          <button 
-            className="fr-btn fr-btn--tertiary-no-outline fr-mb-4w"
-            onClick={() => { setAnalysis(null); setTeaser(null); setFile(null); }}
-          >
-            ← Analyser un autre bail
-          </button>
-
-          {/* Header */}
-          <div className="fr-callout fr-callout--green-emeraude fr-mb-4w">
-            <h2 className="fr-callout__title">✅ Analyse complète de votre bail</h2>
-            <p>Fichier : {analysis.fileName}</p>
-          </div>
-
-          {/* Clauses abusives */}
-          {a.clauses_abusives?.length > 0 && (
-            <div className="fr-mb-4w">
-              <h3>🚨 Clauses abusives ({a.clauses_abusives.length})</h3>
-              {a.clauses_abusives.map((clause, i) => (
-                <div key={i} className="fr-alert fr-alert--error fr-mb-2w">
-                  <p><strong>Extrait :</strong> "{clause.extrait}"</p>
-                  <p><strong>Problème :</strong> {clause.probleme}</p>
-                  <p><strong>Base légale :</strong> {clause.base_legale}</p>
-                  <p><strong>Recommandation :</strong> {clause.recommandation}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Clauses déséquilibrées */}
-          {a.clauses_desequilibrees?.length > 0 && (
-            <div className="fr-mb-4w">
-              <h3>⚠️ Clauses déséquilibrées ({a.clauses_desequilibrees.length})</h3>
-              {a.clauses_desequilibrees.map((clause, i) => (
-                <div key={i} className="fr-alert fr-alert--warning fr-mb-2w">
-                  <p><strong>Extrait :</strong> "{clause.extrait}"</p>
-                  <p><strong>Problème :</strong> {clause.probleme}</p>
-                  <p><strong>Recommandation :</strong> {clause.recommandation}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Points à surveiller */}
-          {a.points_a_surveiller?.length > 0 && (
-            <div className="fr-mb-4w">
-              <h3>👁️ Points à surveiller ({a.points_a_surveiller.length})</h3>
-              {a.points_a_surveiller.map((point, i) => (
-                <div key={i} className="fr-alert fr-alert--info fr-mb-2w">
-                  <p><strong>Extrait :</strong> "{point.extrait}"</p>
-                  <p><strong>Explication :</strong> {point.explication}</p>
-                  <p><strong>Recommandation :</strong> {point.recommandation}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Éléments favorables */}
-          {a.elements_favorables_locataire?.length > 0 && (
-            <div className="fr-mb-4w">
-              <h3>✅ Points favorables ({a.elements_favorables_locataire.length})</h3>
-              {a.elements_favorables_locataire.map((elem, i) => (
-                <div key={i} className="fr-alert fr-alert--success fr-mb-2w">
-                  <p><strong>Extrait :</strong> "{elem.extrait}"</p>
-                  <p><strong>Pourquoi c'est bien :</strong> {elem.pourquoi_c_est_favorable}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Impact sur caution */}
-          {a.impact_sur_caution && (
-            <section className="fr-mb-4w" style={{ 
-              backgroundColor: '#f6f6f6', 
-              padding: '1.5rem', 
-              borderRadius: '8px' 
-            }}>
-              <h3>💰 Impact sur votre caution</h3>
-              <p><strong>Risque :</strong> {a.impact_sur_caution.risque_perte_caution}</p>
-              <p>{a.impact_sur_caution.explication}</p>
-              <h4>Actions concrètes :</h4>
-              <ul>
-                {a.impact_sur_caution.actions_concretes_pour_proteger_la_caution?.map((action, i) => (
-                  <li key={i}>{action}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* Recommandations */}
-          {a.recommandations_generales?.length > 0 && (
-            <section className="fr-mb-4w" style={{ 
-              backgroundColor: '#f6f6f6', 
-              padding: '1.5rem', 
-              borderRadius: '8px' 
-            }}>
-              <h3>📋 Recommandations générales</h3>
-              <ul>
-                {a.recommandations_generales.map((rec, i) => (
-                  <li key={i}>{rec}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* Résumé */}
-          <div className="fr-callout">
-            <h3 className="fr-callout__title">📝 Résumé</h3>
-            <p className="fr-callout__text">{a.resume_simple}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-}
-
-// Composant CheckoutForm Stripe
-function CheckoutForm({ onSuccess, onCancel }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentError, setPaymentError] = useState(null);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    setIsProcessing(true);
-    setPaymentError(null);
-
-    try {
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: window.location.href
-        },
-        redirect: "if_required"
-      });
-
-      if (error) {
-        setPaymentError(error.message);
-        setIsProcessing(false);
-      } else if (paymentIntent && paymentIntent.status === "succeeded") {
-        console.log("✅ Paiement réussi ! PaymentIntent:", paymentIntent.id);
-        setIsProcessing(false);
-        onSuccess(paymentIntent.id);
-      } else {
-        setPaymentError("Le paiement n'a pas pu être confirmé");
-        setIsProcessing(false);
-      }
-    } catch (err) {
-      setPaymentError(err.message || "Erreur lors du paiement");
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <PaymentElement 
-        options={{ 
-          layout: "accordion",
-          defaultCollapsed: false
-        }} 
-      />
-      
-      {paymentError && (
-        <div className="fr-alert fr-alert--error fr-alert--sm fr-mt-2w">
-          <p>{paymentError}</p>
-        </div>
-      )}
-      
-      <div className="fr-btns-group fr-mt-4w" style={{ display: "flex", gap: "12px" }}>
-        <button 
-          type="button" 
-          className="fr-btn fr-btn--secondary"
-          onClick={onCancel}
-          disabled={isProcessing}
-        >
-          Annuler
-        </button>
-        <button 
-          type="submit" 
-          className="fr-btn"
-          disabled={!stripe || isProcessing}
-          style={{ flex: 1 }}
-        >
-          {isProcessing ? "Traitement..." : "Payer 1.99€"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-// Page À propos
 function AboutPage() {
   return (
     <div className="fr-grid-row fr-grid-row--center">
       <div className="fr-col-12 fr-col-lg-8">
-        <h1>À propos de CheckTonBail</h1>
-        
+        <h1>&Agrave; propos de CheckTonBail</h1>
+
         <section className="fr-mb-4w">
           <h2>Notre mission</h2>
           <p>
             CheckTonBail utilise l'intelligence artificielle pour analyser les baux d'habitation
-            et détecter les clauses abusives ou illégales. Notre objectif : protéger les locataires
-            en leur donnant accès à une expertise juridique accessible et abordable.
+            et d&eacute;tecter les clauses abusives ou ill&eacute;gales. Notre objectif : prot&eacute;ger les locataires
+            en leur donnant acc&egrave;s &agrave; une expertise juridique accessible et abordable.
           </p>
         </section>
 
         <section className="fr-mb-4w">
-          <h2>Comment ça marche ?</h2>
+          <h2>Comment &ccedil;a marche ?</h2>
           <ol className="fr-ml-2w">
             <li className="fr-mb-2w">
-              <strong>Déposez votre bail</strong> — Uploadez votre contrat de location au format PDF
+              <strong>D&eacute;posez votre bail</strong> &mdash; Uploadez votre contrat de location au format PDF
             </li>
             <li className="fr-mb-2w">
-              <strong>Analyse gratuite</strong> — Recevez un aperçu des points clés et du niveau de risque
+              <strong>Analyse rapide</strong> &mdash; Recevez un aper&ccedil;u des points cl&eacute;s et du niveau de risque
             </li>
             <li className="fr-mb-2w">
-              <strong>Analyse complète</strong> — Pour 1.99€, accédez au détail de chaque clause
+              <strong>Rapport complet</strong> &mdash; Pour {PRICE}, acc&eacute;dez au d&eacute;tail de chaque clause
             </li>
           </ol>
         </section>
 
         <div className="fr-callout fr-mb-4w">
-          <h3 className="fr-callout__title">⚖️ Base légale</h3>
+          <h3 className="fr-callout__title">Base l&eacute;gale</h3>
           <p className="fr-callout__text">
             Notre analyse se base sur la loi du 6 juillet 1989, les lois ALUR et ELAN,
-            le Code civil (article 1171), et la jurisprudence récente en matière de baux d'habitation.
+            le Code civil (article 1171), et la jurisprudence r&eacute;cente en mati&egrave;re de baux d'habitation.
           </p>
         </div>
 
         <div className="fr-alert fr-alert--info">
           <p>
-            <strong>Avertissement :</strong> CheckTonBail fournit une analyse automatisée à titre informatif.
+            <strong>Avertissement :</strong> CheckTonBail fournit une analyse automatis&eacute;e &agrave; titre informatif.
             Elle ne remplace pas l'avis d'un professionnel du droit. En cas de litige,
-            consultez un avocat ou une association de défense des locataires.
+            consultez un avocat ou une association de d&eacute;fense des locataires.
           </p>
         </div>
       </div>
@@ -1553,97 +1302,76 @@ function AboutPage() {
   );
 }
 
-// Page FAQ
 function FAQ() {
   const [openIndex, setOpenIndex] = React.useState(null);
 
   const faqItems = [
     {
       question: "Comment fonctionne CheckTonBail ?",
-      answer: "CheckTonBail utilise l'intelligence artificielle pour analyser votre contrat de bail. Uploadez simplement votre bail au format PDF, et notre IA identifie les clauses abusives, les points à surveiller et vous fournit des recommandations personnalisées en moins de 30 secondes."
+      answer: "En 3 \u00e9tapes : (1) D\u00e9posez votre bail au format PDF. (2) Recevez gratuitement un aper\u00e7u avec le score de risque et le nombre de clauses probl\u00e9matiques d\u00e9tect\u00e9es. (3) Pour 9,90\u20ac, acc\u00e9dez au rapport complet avec le d\u00e9tail de chaque clause, les bases l\u00e9gales et les recommandations personnalis\u00e9es."
     },
     {
-      question: "Quels types de baux pouvez-vous analyser ?",
-      answer: "Nous analysons tous les baux d'habitation : baux vides (non meublés), baux meublés, baux étudiants (9 mois), et baux mobilité. Notre service est spécialisé dans les contrats de location soumis à la loi du 6 juillet 1989 et la loi ALUR."
+      question: "C\u2019est quoi l\u2019aper\u00e7u gratuit ?",
+      answer: "L\u2019aper\u00e7u gratuit vous donne : le score de risque de votre bail sur 10, le nombre de clauses probl\u00e9matiques d\u00e9tect\u00e9es, et les titres des clauses concern\u00e9es. Le d\u00e9tail (texte exact, base l\u00e9gale, recommandation) est accessible dans le rapport complet."
     },
     {
-      question: "L'analyse gratuite est-elle vraiment gratuite ?",
-      answer: "Oui ! L'analyse gratuite vous donne un aperçu de votre bail : type de bail, informations clés, score de risque et nombre de clauses problématiques détectées. Vous pouvez effectuer 3 analyses gratuites par jour."
+      question: "Que contient le rapport complet \u00e0 9,90\u20ac ?",
+      answer: "Le rapport complet comprend : chaque clause abusive avec son extrait exact et la r\u00e9f\u00e9rence de loi pr\u00e9cise, les clauses d\u00e9s\u00e9quilibr\u00e9es (l\u00e9gales mais d\u00e9favorables), les points \u00e0 surveiller avant de signer, les \u00e9l\u00e9ments qui vous prot\u00e8gent, l\u2019\u00e9valuation du risque de perte de votre d\u00e9p\u00f4t de garantie, et des recommandations concr\u00e8tes. Le tout est t\u00e9l\u00e9chargeable en PDF."
     },
     {
-      question: "Que contient l'analyse complète à 1.99€ ?",
-      answer: "L'analyse complète comprend : le détail de chaque clause abusive avec la référence légale, les clauses déséquilibrées, les points à surveiller, les éléments favorables au locataire, l'impact sur votre dépôt de garantie, et des recommandations personnalisées pour vous protéger."
+      question: "Quels types de baux analysez-vous ?",
+      answer: "Nous analysons tous les baux d\u2019habitation r\u00e9gis par la loi fran\u00e7aise : baux vides (non meubl\u00e9s), baux meubl\u00e9s, baux \u00e9tudiants (9 mois) et baux mobilit\u00e9. L\u2019analyse s\u2019appuie sur la loi du 6 juillet 1989, les lois ALUR et ELAN, et le Code civil."
     },
     {
-      question: "Mes documents sont-ils sécurisés ?",
-      answer: "Absolument. Vos documents sont transmis de manière chiffrée (SSL), analysés en temps réel, puis immédiatement supprimés de nos serveurs. Nous ne conservons aucune copie de vos baux. Vos données bancaires sont traitées par Stripe, leader mondial du paiement sécurisé."
+      question: "Mes documents sont-ils s\u00e9curis\u00e9s ?",
+      answer: "Oui. Votre bail est transmis via une connexion chiffr\u00e9e (SSL), analys\u00e9 en temps r\u00e9el, puis imm\u00e9diatement supprim\u00e9 de nos serveurs. Nous ne conservons aucune copie de votre document. Vos donn\u00e9es bancaires sont trait\u00e9es exclusivement par Stripe. Traitement conforme au RGPD."
     },
     {
-      question: "L'analyse remplace-t-elle un avocat ?",
-      answer: "Non. CheckTonBail fournit une analyse informative basée sur l'IA pour vous aider à comprendre votre bail. Pour des situations complexes ou des litiges, nous vous recommandons de consulter un avocat spécialisé en droit immobilier."
+      question: "L\u2019analyse remplace-t-elle un avocat ?",
+      answer: "Non. CheckTonBail fournit une analyse informative bas\u00e9e sur l\u2019intelligence artificielle pour vous aider \u00e0 comprendre votre bail et identifier les points probl\u00e9matiques. Pour un litige actif ou une situation complexe, consultez un avocat sp\u00e9cialis\u00e9 en droit immobilier ou une association de d\u00e9fense des locataires."
     },
     {
-      question: "Que faire si je trouve des clauses abusives ?",
-      answer: "Les clauses abusives sont réputées non écrites selon la loi. Cela signifie qu'elles n'ont aucune valeur juridique même si vous avez signé le bail. Vous pouvez refuser de les appliquer et, en cas de litige, saisir la Commission départementale de conciliation ou le tribunal."
+      question: "Que faire si mon bail contient des clauses abusives ?",
+      answer: "Les clauses abusives sont r\u00e9put\u00e9es non \u00e9crites par la loi, m\u00eame si vous avez sign\u00e9 le bail. Vous pouvez exiger leur suppression par courrier recommand\u00e9 avec accus\u00e9 de r\u00e9ception en citant la base l\u00e9gale (fournie dans votre rapport). En cas de refus, saisissez la Commission D\u00e9partementale de Conciliation ou le tribunal judiciaire."
     },
     {
-      question: "Combien de temps dure l'analyse ?",
-      answer: "L'analyse prend généralement entre 20 et 40 secondes selon la longueur de votre bail. Pendant ce temps, nous extrayons le texte, l'analysons avec notre IA juridique, et générons votre rapport personnalisé."
-    },
-    {
-      question: "Comment récupérer mon dépôt de garantie ?",
-      answer: "Notre analyse évalue le risque de perte de votre caution et vous donne des conseils concrets : faire un état des lieux détaillé, prendre des photos, garder les preuves d'entretien. En cas de retenue abusive, vous pouvez envoyer une mise en demeure puis saisir le tribunal."
-    },
-    {
-      question: "Puis-je me faire rembourser ?",
-      answer: "Le service étant délivré immédiatement après paiement (contenu numérique), le droit de rétractation ne s'applique pas conformément à l'article L221-28 du Code de la consommation. Cependant, contactez-nous en cas de problème technique."
+      question: "Satisfait ou rembours\u00e9 ?",
+      answer: "Si vous n\u2019\u00eates pas satisfait de votre analyse, contactez-nous dans les 7 jours suivant votre achat \u00e0 checkTonBail@outlook.com. Nous proc\u00e9dons au remboursement int\u00e9gral, sans question."
     }
   ];
 
   return (
     <div className="fr-grid-row fr-grid-row--center">
       <div className="fr-col-12 fr-col-lg-8">
-        <h1>Questions Fréquentes</h1>
+        <h1>Questions Fr&eacute;quentes</h1>
         <p className="fr-text--lead fr-mb-4w">
           Tout ce que vous devez savoir sur CheckTonBail et l'analyse de votre bail locatif.
         </p>
-        
+
         <div>
           {faqItems.map((item, index) => (
             <div key={index} style={{ marginBottom: '12px' }}>
               <button
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
                 style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '16px 20px',
+                  width: '100%', textAlign: 'left', padding: '16px 20px',
                   background: openIndex === index ? '#000091' : '#fff',
                   color: openIndex === index ? '#fff' : '#000',
                   border: '1px solid #ddd',
                   borderRadius: openIndex === index ? '8px 8px 0 0' : '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
+                  cursor: 'pointer', fontSize: '16px', fontWeight: 600,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                 }}
               >
                 <span>{item.question}</span>
-                <span style={{ fontSize: '20px' }}>{openIndex === index ? '−' : '+'}</span>
+                <span style={{ fontSize: '20px' }}>{openIndex === index ? '\u2212' : '+'}</span>
               </button>
               {openIndex === index && (
-                <div 
-                  style={{
-                    padding: '20px',
-                    background: '#f6f6f6',
-                    borderRadius: '0 0 8px 8px',
-                    border: '1px solid #ddd',
-                    borderTop: 'none',
-                    lineHeight: 1.7,
-                    color: '#333'
-                  }}
-                >
+                <div style={{
+                  padding: '20px', background: '#f6f6f6',
+                  borderRadius: '0 0 8px 8px', border: '1px solid #ddd',
+                  borderTop: 'none', lineHeight: 1.7, color: '#333'
+                }}>
                   {item.answer}
                 </div>
               )}
@@ -1654,7 +1382,7 @@ function FAQ() {
         <div className="fr-callout fr-mt-4w">
           <h3 className="fr-callout__title">Une autre question ?</h3>
           <p className="fr-callout__text">
-            Contactez-nous par email à <a href="mailto:checkTonBail@outlook.com">checkTonBail@outlook.com</a>
+            Contactez-nous par email &agrave; <a href="mailto:checkTonBail@outlook.com">checkTonBail@outlook.com</a>
           </p>
         </div>
       </div>
@@ -1662,15 +1390,14 @@ function FAQ() {
   );
 }
 
-// Page Mentions Légales
 function MentionsLegales() {
   return (
     <div className="fr-grid-row fr-grid-row--center">
       <div className="fr-col-12 fr-col-lg-8">
-        <h1>Mentions Légales</h1>
-        
+        <h1>Mentions L&eacute;gales</h1>
+
         <section className="fr-mb-4w">
-          <h2>Éditeur du site</h2>
+          <h2>&Eacute;diteur du site</h2>
           <p>
             <strong>CheckTonBail SAS</strong><br />
             Email : <a href="mailto:checkTonBail@outlook.com">checkTonBail@outlook.com</a>
@@ -1678,26 +1405,26 @@ function MentionsLegales() {
         </section>
 
         <section className="fr-mb-4w">
-          <h2>Hébergement</h2>
+          <h2>H&eacute;bergement</h2>
           <p>
-            Les informations relatives à l'hébergeur sont disponibles sur demande à l'adresse : 
+            Les informations relatives &agrave; l'h&eacute;bergeur sont disponibles sur demande &agrave; l'adresse :
             <a href="mailto:checkTonBail@outlook.com"> checkTonBail@outlook.com</a>
           </p>
         </section>
 
         <section className="fr-mb-4w">
-          <h2>Propriété intellectuelle</h2>
+          <h2>Propri&eacute;t&eacute; intellectuelle</h2>
           <p>
-            L'ensemble du contenu de ce site est la propriété exclusive de CheckTonBail SAS. 
+            L'ensemble du contenu de ce site est la propri&eacute;t&eacute; exclusive de CheckTonBail SAS.
             Toute reproduction sans autorisation est interdite.
           </p>
         </section>
 
         <section className="fr-mb-4w">
-          <h2>Limitation de responsabilité</h2>
+          <h2>Limitation de responsabilit&eacute;</h2>
           <p>
-            CheckTonBail fournit une analyse automatisée à titre informatif uniquement. 
-            Ce service ne constitue pas un conseil juridique et ne remplace pas la consultation 
+            CheckTonBail fournit une analyse automatis&eacute;e &agrave; titre informatif uniquement.
+            Ce service ne constitue pas un conseil juridique et ne remplace pas la consultation
             d'un professionnel du droit.
           </p>
         </section>
@@ -1711,56 +1438,54 @@ function MentionsLegales() {
         </section>
 
         <p className="fr-text--sm" style={{ color: '#666' }}>
-          Dernière mise à jour : {new Date().toLocaleDateString('fr-FR')}
+          Derni&egrave;re mise &agrave; jour : {new Date().toLocaleDateString('fr-FR')}
         </p>
       </div>
     </div>
   );
 }
 
-// Page CGV
 function CGV() {
   return (
     <div className="fr-grid-row fr-grid-row--center">
       <div className="fr-col-12 fr-col-lg-8">
-        <h1>Conditions Générales de Vente</h1>
-        
+        <h1>Conditions G&eacute;n&eacute;rales de Vente</h1>
+
         <section className="fr-mb-4w">
           <h2>Objet</h2>
           <p>
-            Les présentes CGV régissent la vente du service d'analyse de baux proposé par CheckTonBail SAS.
+            Les pr&eacute;sentes CGV r&eacute;gissent la vente du service d'analyse de baux propos&eacute; par CheckTonBail SAS.
           </p>
         </section>
 
         <section className="fr-mb-4w">
           <h2>Services</h2>
           <p>
-            CheckTonBail propose un service d'analyse de baux d'habitation. 
-            Une version gratuite limitée et une version complète payante sont disponibles.
+            CheckTonBail propose un service d'analyse de baux d'habitation.
+            Un aper&ccedil;u gratuit et une analyse compl&egrave;te payante sont disponibles.
           </p>
         </section>
 
         <section className="fr-mb-4w">
           <h2>Prix et paiement</h2>
           <p>
-            Le prix de l'analyse complète est de 1.99€ TTC. Le paiement s'effectue en ligne 
-            de manière sécurisée. Le service est délivré immédiatement après paiement.
+            Le prix de l'analyse compl&egrave;te est de {PRICE} TTC. Le paiement s'effectue en ligne
+            de mani&egrave;re s&eacute;curis&eacute;e via Stripe. Le service est d&eacute;livr&eacute; imm&eacute;diatement apr&egrave;s paiement.
           </p>
         </section>
 
         <section className="fr-mb-4w">
-          <h2>Droit de rétractation</h2>
+          <h2>Garantie de satisfaction</h2>
           <p>
-            Conformément à l'article L221-28 du Code de la consommation, le droit de rétractation 
-            ne s'applique pas aux contenus numériques fournis immédiatement. En validant le paiement, 
-            vous acceptez l'exécution immédiate du service.
+            Si vous n'&ecirc;tes pas satisfait de votre analyse, contactez-nous dans les 7 jours
+            suivant votre achat &agrave; checkTonBail@outlook.com pour obtenir un remboursement int&eacute;gral.
           </p>
         </section>
 
         <section className="fr-mb-4w">
-          <h2>Responsabilité</h2>
+          <h2>Responsabilit&eacute;</h2>
           <p>
-            CheckTonBail fournit une analyse à titre informatif. Ce service ne constitue pas 
+            CheckTonBail fournit une analyse &agrave; titre informatif. Ce service ne constitue pas
             un conseil juridique professionnel.
           </p>
         </section>
@@ -1768,26 +1493,25 @@ function CGV() {
         <section className="fr-mb-4w">
           <h2>Contact</h2>
           <p>
-            Pour toute question ou réclamation :<br />
+            Pour toute question ou r&eacute;clamation :<br />
             <a href="mailto:checkTonBail@outlook.com">checkTonBail@outlook.com</a>
           </p>
         </section>
 
         <p className="fr-text--sm" style={{ color: '#666' }}>
-          Dernière mise à jour : {new Date().toLocaleDateString('fr-FR')}
+          Derni&egrave;re mise &agrave; jour : {new Date().toLocaleDateString('fr-FR')}
         </p>
       </div>
     </div>
   );
 }
 
-// Page Politique de Confidentialité
 function PolitiqueConfidentialite() {
   return (
     <div className="fr-grid-row fr-grid-row--center">
       <div className="fr-col-12 fr-col-lg-8">
-        <h1>Politique de Confidentialité</h1>
-        
+        <h1>Politique de Confidentialit&eacute;</h1>
+
         <section className="fr-mb-4w">
           <h2>Responsable du traitement</h2>
           <p>
@@ -1797,58 +1521,57 @@ function PolitiqueConfidentialite() {
         </section>
 
         <section className="fr-mb-4w">
-          <h2>Données collectées</h2>
+          <h2>Donn&eacute;es collect&eacute;es</h2>
           <p>
-            Nous collectons uniquement les données nécessaires au fonctionnement du service. 
-            Les documents que vous uploadez sont analysés puis supprimés immédiatement.
-            Vos données bancaires sont traitées de manière sécurisée par notre prestataire de paiement.
+            Nous collectons uniquement les donn&eacute;es n&eacute;cessaires au fonctionnement du service.
+            Les documents que vous uploadez sont analys&eacute;s puis supprim&eacute;s imm&eacute;diatement.
+            Vos donn&eacute;es bancaires sont trait&eacute;es de mani&egrave;re s&eacute;curis&eacute;e par notre prestataire de paiement.
           </p>
         </section>
 
         <section className="fr-mb-4w">
-          <h2>Utilisation des données</h2>
+          <h2>Utilisation des donn&eacute;es</h2>
           <p>
-            Vos données sont utilisées exclusivement pour fournir le service d'analyse. 
-            Nous ne vendons pas vos données et ne les utilisons pas à des fins publicitaires.
+            Vos donn&eacute;es sont utilis&eacute;es exclusivement pour fournir le service d'analyse.
+            Nous ne vendons pas vos donn&eacute;es et ne les utilisons pas &agrave; des fins publicitaires.
           </p>
         </section>
 
         <section className="fr-mb-4w">
           <h2>Vos droits</h2>
           <p>
-            Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, de suppression 
-            et de portabilité de vos données. Pour exercer ces droits, contactez-nous à :
+            Conform&eacute;ment au RGPD, vous disposez d'un droit d'acc&egrave;s, de rectification, de suppression
+            et de portabilit&eacute; de vos donn&eacute;es. Pour exercer ces droits, contactez-nous &agrave; :
             <a href="mailto:checkTonBail@outlook.com"> checkTonBail@outlook.com</a>
           </p>
         </section>
 
         <section className="fr-mb-4w">
-          <h2>Sécurité</h2>
+          <h2>S&eacute;curit&eacute;</h2>
           <p>
-            Nous mettons en œuvre des mesures de sécurité appropriées pour protéger vos données.
+            Nous mettons en oeuvre des mesures de s&eacute;curit&eacute; appropri&eacute;es pour prot&eacute;ger vos donn&eacute;es.
           </p>
         </section>
 
         <section className="fr-mb-4w">
           <h2>Contact</h2>
           <p>
-            Pour toute question relative à la protection de vos données :<br />
+            Pour toute question relative &agrave; la protection de vos donn&eacute;es :<br />
             <a href="mailto:checkTonBail@outlook.com">checkTonBail@outlook.com</a>
           </p>
           <p>
-            Vous pouvez également contacter la CNIL : <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">www.cnil.fr</a>
+            Vous pouvez &eacute;galement contacter la CNIL : <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">www.cnil.fr</a>
           </p>
         </section>
 
         <p className="fr-text--sm" style={{ color: '#666' }}>
-          Dernière mise à jour : {new Date().toLocaleDateString('fr-FR')}
+          Derni&egrave;re mise &agrave; jour : {new Date().toLocaleDateString('fr-FR')}
         </p>
       </div>
     </div>
   );
 }
 
-// Composant principal avec CookieBanner
 function AppWithCookies() {
   return (
     <>
