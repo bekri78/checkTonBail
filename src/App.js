@@ -384,6 +384,10 @@ function AnalyseBail({ userId, t }) {
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('session_id');
     if (!sessionId) return;
+    if (!userId) return; // Attendre que userId soit chargé
+
+    // Nettoyer l'URL immédiatement pour éviter un double appel
+    window.history.replaceState({}, document.title, window.location.pathname);
 
     const handleReturn = async () => {
       try {
@@ -427,8 +431,7 @@ function AnalyseBail({ userId, t }) {
         setCurrentStep('upload');
       }
 
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // URL déjà nettoyée au début du useEffect
     };
 
     handleReturn();
