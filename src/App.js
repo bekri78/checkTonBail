@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
+import "@gouvfr/dsfr/dist/dsfr.min.css";
+import "@gouvfr/dsfr/dist/utility/icons/icons.min.css";
+import "./App.css";
+
 const translations = {
   tagline: "Analysez votre bail en 30 secondes",
   heroTitle: "Analysez votre bail gratuitement",
@@ -60,9 +64,6 @@ const translations = {
   faqRefund: "Puis-je être remboursé ?",
   faqRefundAnswer: "Oui, contactez-nous sous 24h si vous n'êtes pas satisfait.",
 };
-import "@gouvfr/dsfr/dist/dsfr.min.css";
-import "@gouvfr/dsfr/dist/utility/icons/icons.min.css";
-import "./App.css";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:4000";
 
