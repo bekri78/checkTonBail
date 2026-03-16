@@ -335,12 +335,14 @@ function AnalyseBail({ userId, t }) {
   const [userEmail, setUserEmail] = useState("");
 
   // Analysis data
+  // eslint-disable-next-line no-unused-vars
   const [extractedText, setExtractedText] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [analysisFileName, setAnalysisFileName] = useState("");
 
   // Payment state
   const [checkoutClientSecret, setCheckoutClientSecret] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [checkoutSessionId, setCheckoutSessionId] = useState(null);
 
   // Stats
