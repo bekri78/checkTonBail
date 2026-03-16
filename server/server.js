@@ -708,6 +708,6 @@ process.on('SIGTERM', () => {
     console.log('✅ Serveur arrêté proprement');
     process.exit(0);
   });
-  // Forcer la sortie après 30s si des requêtes traînent
-  setTimeout(() => process.exit(1), 30000);
+  // Forcer la sortie après 5 min si des requêtes traînent (OCR peut être long)
+  setTimeout(() => process.exit(1), 300000);
 });

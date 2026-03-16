@@ -20,7 +20,7 @@ const translations = {
   downloadReport: "📥 Télécharger le rapport PDF",
   newAnalysis: "🔄 Nouvelle analyse",
   preparingService: "⏳ Préparation du service d'analyse... (quelques secondes)",
-  analyzingProgress: "Analyse en cours...",
+  analyzingProgress: "Analyse en cours... (peut prendre 1-2 minutes)",
   resultsTitle: "Analyse complète de votre bail",
   abusiveClauses: "Clauses abusives détectées",
   unbalancedClauses: "Clauses déséquilibrées",
@@ -552,6 +552,9 @@ function AnalyseBail({ userId, t }) {
         }} />
         <p style={{ color: "#000091", fontSize: "1.2rem", fontWeight: "bold" }}>
           Préparation de votre analyse...
+        </p>
+        <p style={{ color: "#666", fontSize: "0.9rem", marginTop: "0.5rem" }}>
+          PDF scanné détecté — l'extraction peut prendre 1 à 3 minutes
         </p>
       </div>
     );
