@@ -915,7 +915,7 @@ function AnalyseBail({ userId, t }) {
             {[
               { num: publicStats.totalAnalyses, label: "baux analys\u00e9s" },
               { num: publicStats.totalClausesDetected, label: "clauses d\u00e9tect\u00e9es" },
-              { num: "100%", label: "base l\u00e9gale cit\u00e9e" }
+              { num: "100%", label: "base l\u00e9gale" }
             ].map((stat, i) => (
               <div key={i} className="fr-col-4">
                 <div style={{
