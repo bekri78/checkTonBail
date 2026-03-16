@@ -408,7 +408,7 @@ async function extractTextFromPDF(buffer) {
       const batchPromises = batch.map((page, idx) =>
         getVisionClient().textDetection({
           image: { content: page.content.toString('base64') }
-        }).then(([result]) => ({
+        }, { timeout: 30000 }).then(([result]) => ({
           index: i + idx,
           text: result.fullTextAnnotation?.text || ''
         })).catch(err => {
