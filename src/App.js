@@ -1021,7 +1021,7 @@ function AnalyseBail({ userId, t }) {
               background: "#fff", border: "1px solid #e5e5e5", borderRadius: "8px",
               padding: "1.5rem", display: "flex", flexDirection: "column", justifyContent: "space-between"
             }}>
-              <p style={{ fontStyle: "italic", color: "#333", lineHeight: 1.7, margin: "0 0 1rem", fontSize: "0.95rem" }}>
+              <p style={{ fontStyle: "italic", color: "#333", lineHeight: 1.7, margin: "0 0 1rem", fontSize: "0.95rem", whiteSpace: "normal", wordBreak: "break-word" }}>
                 &laquo; {avis.text} &raquo;
               </p>
               <p style={{ margin: 0, fontSize: "0.85rem", color: "#666", fontWeight: "600" }}>
