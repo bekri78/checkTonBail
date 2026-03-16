@@ -7,7 +7,7 @@ import "./App.css";
 
 const translations = {
   tagline: "Analysez votre bail en 30 secondes",
-  heroTitle: "Analysez votre bail gratuitement",
+  heroTitle: "Votre bail cache-t-il des clauses abusives ?",
   heroSubtitle: "Déposez votre bail et découvrez instantanément les clauses problématiques",
   dropzoneText: "Glissez-déposez votre bail ici",
   dropzoneTextDragging: "Déposez votre fichier ici",
