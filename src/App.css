@@ -138,7 +138,8 @@ button[aria-label*="Stripe"],
 
 @media (max-width: 767px) {
   .testimonials-scroll {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 80vw);
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
@@ -147,14 +148,5 @@ button[aria-label*="Stripe"],
   }
   .testimonials-scroll > * {
     scroll-snap-align: start;
-    min-width: 280px;
-    flex-shrink: 0;
-  }
-  .testimonials-scroll::-webkit-scrollbar {
-    height: 4px;
-  }
-  .testimonials-scroll::-webkit-scrollbar-thumb {
-    background: #000091;
-    border-radius: 4px;
   }
 }
