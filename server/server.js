@@ -391,7 +391,7 @@ async function extractTextFromPDF(buffer) {
     const pngPages = await pdfToPng(buffer, {
       disableFontFace: false,
       useSystemFonts: false,
-      viewportScale: 1.8,
+      viewportScale: 1.2,
     });
     console.log(`   📄 ${pngPages.length} pages converties en ${Date.now() - pngStart}ms`);
 
