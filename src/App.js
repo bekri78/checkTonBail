@@ -515,43 +515,11 @@ function AnalyseBail({ userId, t }) {
     }
   };
 
-  // Handle checkout complete
-  const handleCheckoutComplete = useCallback(async () => {
+  // Handle checkout complete — Stripe redirige vers return_url?session_id=xxx
+  // Le useEffect ci-dessus gère l'analyse, pas besoin de le faire ici
+  const handleCheckoutComplete = useCallback(() => {
     setCurrentStep('analyzing');
-
-    try {
-      if (!extractedText) {
-        setError("Texte du bail manquant. Veuillez r\u00e9analyser le document.");
-        setCurrentStep('upload');
-        return;
-      }
-
-      const res = await fetch(`${API_BASE}/api/analyse-bail-text`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bailText: extractedText,
-          fileName: analysisFileName,
-          userId,
-          checkoutSessionId: checkoutSessionId,
-          country: 'FR'
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || t('errorUnknown'));
-      }
-
-      setAnalysis(data);
-      setAnalysisFileName(data.fileName || analysisFileName);
-      setCurrentStep('report');
-      trackEvent('purchase', { event_category: 'conversion', value: PRICE_NUMERIC, currency: 'EUR' });
-    } catch (err) {
-      setError(err.message || t('errorUnknown'));
-      setCurrentStep('upload');
-    }
-  }, [extractedText, analysisFileName, userId, checkoutSessionId, t]);
+  }, []);
 
   // Reset
   const handleReset = () => {
