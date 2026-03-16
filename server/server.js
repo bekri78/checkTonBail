@@ -697,6 +697,17 @@ app.post("/api/stripe-webhook", express.raw({ type: 'application/json' }), async
   res.json({ received: true });
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`✅ Backend CheckTonBail running on http://localhost:${port}`);
+});
+
+// Graceful shutdown : attendre la fin des requêtes en cours avant de quitter
+process.on('SIGTERM', () => {
+  console.log('⏳ SIGTERM reçu, fermeture gracieuse...');
+  server.close(() => {
+    console.log('✅ Serveur arrêté proprement');
+    process.exit(0);
+  });
+  // Forcer la sortie après 30s si des requêtes traînent
+  setTimeout(() => process.exit(1), 30000);
 });
