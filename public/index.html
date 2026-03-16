@@ -61,10 +61,7 @@
     
     <!-- CSS Critique inline pour améliorer FCP/LCP -->
     <style>
-      body{margin:0;font-family:Marianne,arial,sans-serif;background:#f6f6f6}
-      .fr-header{background:#fff;box-shadow:0 8px 8px 0 rgba(0,0,0,.1)}
-      .fr-container{max-width:1200px;margin:0 auto;padding:0 1rem}
-      .fr-header__body{padding:1rem 0}
+      body{margin:0;background:#f6f6f6}
       #root{min-height:100vh}
       .loading-placeholder{display:flex;justify-content:center;align-items:center;min-height:50vh;color:#000091}
     </style>
@@ -74,13 +71,7 @@
     <link rel="preconnect" href="https://checktonbail.onrender.com" crossorigin />
     <link rel="dns-prefetch" href="https://js.stripe.com" />
     <link rel="preconnect" href="https://js.stripe.com" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    
-    <!-- Police Marianne (DSFR) - chargement optimisé -->
-    <link href="https://fonts.googleapis.com/css2?family=Marianne:wght@400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Marianne:wght@400;500;700&display=swap" rel="stylesheet" /></noscript>
-    
+
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     
     <!-- Structured Data (JSON-LD) pour Google -->
@@ -95,7 +86,7 @@
       "operatingSystem": "Web",
       "offers": {
         "@type": "Offer",
-        "price": "1.99",
+        "price": "9.90",
         "priceCurrency": "EUR",
         "description": "Analyse complète de bail"
       },
@@ -149,7 +140,7 @@
           "name": "Combien coûte l'analyse complète d'un bail ?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "L'analyse complète de votre bail coûte seulement 1,99€. Vous obtenez un aperçu gratuit avant de payer pour voir si des problèmes ont été détectés."
+            "text": "L'analyse complète de votre bail coûte 9,90\u20AC. Vous obtenez d'abord un aperçu gratuit avec le score de risque, puis le rapport détaillé après paiement."
           }
         },
         {
@@ -208,7 +199,7 @@
       },
       "offers": {
         "@type": "Offer",
-        "price": "1.99",
+        "price": "9.90",
         "priceCurrency": "EUR",
         "availability": "https://schema.org/InStock"
       },

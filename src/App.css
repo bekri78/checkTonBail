@@ -71,12 +71,90 @@ button[aria-label*="Stripe"],
 }
 
 /* Override DSFR pour nos besoins */
+.fr-header__body {
+  padding: 0 !important;
+}
+
 .fr-header__service-title {
   color: #000091 !important;
   font-weight: 700 !important;
 }
 
-.fr-tile__desc {
-  font-weight: 600;
-  color: #161616;
+/* Tiles CTB — style impots.gouv.fr */
+.ctb-card-illegal,
+.ctb-card-rapport {
+  height: 100%;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ctb-card-illegal:hover,
+.ctb-card-rapport:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 145, 0.13);
+}
+
+/* fr-tile/card overrides */
+.ctb-card-illegal .fr-card__title {
+  color: #CE0500 !important;
+  font-size: 1.05rem !important;
+}
+.ctb-card-illegal .fr-card__detail {
+  font-size: 0.95rem !important;
+  color: #555 !important;
+  line-height: 1.6;
+}
+
+/* Feature list — Ce que contient votre rapport */
+.ctb-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #e5e5e5;
+}
+.ctb-feature__icon {
+  color: #000091;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.ctb-feature__title {
+  font-weight: 700;
+  color: #000091;
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+.ctb-feature__desc {
+  color: #555;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Testimonials — desktop 3 cols, mobile horizontal scroll */
+.testimonials-scroll {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 767px) {
+  .testimonials-scroll {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    padding-bottom: 8px;
+  }
+  .testimonials-scroll > * {
+    scroll-snap-align: start;
+    min-width: 280px;
+    flex-shrink: 0;
+  }
+  .testimonials-scroll::-webkit-scrollbar {
+    height: 4px;
+  }
+  .testimonials-scroll::-webkit-scrollbar-thumb {
+    background: #000091;
+    border-radius: 4px;
+  }
 }
