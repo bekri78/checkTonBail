@@ -405,17 +405,21 @@ async function extractTextFromPDF(buffer) {
       const batchNum = Math.floor(i / BATCH_SIZE) + 1;
       const totalBatches = Math.ceil(pngPages.length / BATCH_SIZE);
 
-      const batchPromises = batch.map((page, idx) =>
-        getVisionClient().textDetection({
+      const batchPromises = batch.map((page, idx) => {
+        const visionCall = getVisionClient().textDetection({
           image: { content: page.content.toString('base64') }
-        }, { timeout: 30000 }).then(([result]) => ({
+        }).then(([result]) => ({
           index: i + idx,
           text: result.fullTextAnnotation?.text || ''
-        })).catch(err => {
+        }));
+        const timeoutCall = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Vision timeout 30s')), 30000)
+        );
+        return Promise.race([visionCall, timeoutCall]).catch(err => {
           console.error(`   ❌ Erreur OCR page ${i + idx + 1}:`, err.message);
           return { index: i + idx, text: '' };
-        })
-      );
+        });
+      });
 
       const batchResults = await Promise.all(batchPromises);
       allTexts.push(...batchResults);
@@ -699,6 +703,12 @@ app.post("/api/stripe-webhook", express.raw({ type: 'application/json' }), async
 
 const server = app.listen(port, () => {
   console.log(`✅ Backend CheckTonBail running on http://localhost:${port}`);
+
+  // Pré-chauffer les connexions Google Vision au démarrage (fire & forget)
+  const dummyImage = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  getVisionClient().textDetection({ image: { content: dummyImage } })
+    .then(() => console.log('✅ Vision API connexion établie'))
+    .catch(() => console.warn('⚠️ Vision API pre-warm échoué'));
 });
 
 // Graceful shutdown : attendre la fin des requêtes en cours avant de quitter
