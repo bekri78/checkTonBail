@@ -4,6 +4,8 @@ import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe
 import "@gouvfr/dsfr/dist/dsfr.min.css";
 import "@gouvfr/dsfr/dist/utility/icons/icons.min.css";
 import "./App.css";
+import BlogList from "./blog/BlogList";
+import BlogArticle from "./blog/BlogArticle";
 
 const translations = {
   tagline: "Analysez votre bail en 30 secondes",
@@ -1091,11 +1093,45 @@ function AnalyseBail({ userId, t }) {
 // ==========================================
 // APP PRINCIPALE
 // ==========================================
+function pageFromPath(path) {
+  if (path === "/blog" || path === "/blog/") return { page: "blog-list", slug: null };
+  if (path.startsWith("/blog/")) {
+    const slug = path.replace("/blog/", "").replace(/\/$/, "");
+    return { page: "blog-article", slug };
+  }
+  return { page: "analyse", slug: null };
+}
+
 function App() {
-  const [currentPage, setCurrentPage] = useState("analyse");
+  const initial = pageFromPath(window.location.pathname);
+  const [currentPage, setCurrentPage] = useState(initial.page);
+  const [blogSlug, setBlogSlug] = useState(initial.slug);
   const [userId, setUserId] = useState(null);
 
   const t = (key) => translations[key] || key;
+
+  // URL sync: navigate function
+  const navigate = useCallback((page, slug = null) => {
+    let url = "/";
+    if (page === "blog-list") url = "/blog/";
+    else if (page === "blog-article" && slug) url = `/blog/${slug}/`;
+    window.history.pushState({}, "", url);
+    setCurrentPage(page);
+    setBlogSlug(slug);
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Back/forward browser navigation
+  useEffect(() => {
+    const handlePop = () => {
+      const { page, slug } = pageFromPath(window.location.pathname);
+      setCurrentPage(page);
+      setBlogSlug(slug);
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
 
   useEffect(() => {
     let id = localStorage.getItem("checktonbail_userId");
@@ -1122,7 +1158,7 @@ function App() {
               <div className="fr-header__brand fr-enlarge-link">
                 <div className="fr-header__brand-top">
                   <div className="fr-header__logo">
-                    <a href="/" title="Accueil - CheckTonBail" style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}>
+                    <a href="/" onClick={(e) => { e.preventDefault(); navigate("analyse"); }} title="Accueil - CheckTonBail" style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}>
                       <img src="/logo-checktonbail.svg" alt="CheckTonBail" style={{ height: "40px", width: "40px" }} />
                       <span style={{ fontWeight: 700, fontSize: "20px", color: "#000091" }}>CheckTonBail</span>
                     </a>
@@ -1138,9 +1174,17 @@ function App() {
                     <li>
                       <button
                         className={`fr-btn ${currentPage === "analyse" ? "" : "fr-btn--secondary"}`}
-                        onClick={() => setCurrentPage("analyse")}
+                        onClick={() => navigate("analyse")}
                       >
                         Analyse
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className={`fr-btn ${currentPage === "blog-list" || currentPage === "blog-article" ? "" : "fr-btn--secondary"}`}
+                        onClick={() => navigate("blog-list")}
+                      >
+                        Blog
                       </button>
                     </li>
                     <li>
@@ -1161,19 +1205,23 @@ function App() {
 
       {/* Main Content */}
       <main role="main" id="content">
-        <div className="fr-container fr-py-8w">
-          {currentPage === "analyse" && (
-            <AnalyseBail
-              userId={userId}
-              t={t}
-            />
-          )}
-          {currentPage === "about" && <AboutPage />}
-          {currentPage === "faq" && <FAQ />}
-          {currentPage === "mentions" && <MentionsLegales />}
-          {currentPage === "cgv" && <CGV />}
-          {currentPage === "confidentialite" && <PolitiqueConfidentialite />}
-        </div>
+        {currentPage === "blog-list" && <BlogList navigate={navigate} />}
+        {currentPage === "blog-article" && <BlogArticle slug={blogSlug} navigate={navigate} />}
+        {currentPage !== "blog-list" && currentPage !== "blog-article" && (
+          <div className="fr-container fr-py-8w">
+            {currentPage === "analyse" && (
+              <AnalyseBail
+                userId={userId}
+                t={t}
+              />
+            )}
+            {currentPage === "about" && <AboutPage />}
+            {currentPage === "faq" && <FAQ />}
+            {currentPage === "mentions" && <MentionsLegales />}
+            {currentPage === "cgv" && <CGV />}
+            {currentPage === "confidentialite" && <PolitiqueConfidentialite />}
+          </div>
+        )}
       </main>
 
       {/* Footer DSFR */}
@@ -1200,6 +1248,10 @@ function App() {
                 <span className="fr-footer__bottom-link">&copy; {new Date().getFullYear()} CheckTonBail</span>
               </li>
 
+              <li className="fr-footer__bottom-item">
+                <button className="fr-footer__bottom-link" onClick={() => navigate("blog-list")}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Blog</button>
+              </li>
               <li className="fr-footer__bottom-item">
                 <button className="fr-footer__bottom-link" onClick={() => setCurrentPage("mentions")}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>{t('legalNotice')}</button>
