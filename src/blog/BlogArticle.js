@@ -1,9 +1,17 @@
 import React, { useEffect } from "react";
 import { ARTICLES } from "./articles/data";
 import ArticleClauseBailIllegale from "./articles/clause-bail-illegale";
+import ArticleDepotDeGarantie from "./articles/depot-de-garantie-bail";
+import Article10ClausesInterdites from "./articles/10-clauses-interdites-bail";
+import ArticleBailMeubleEtudiant from "./articles/bail-meuble-etudiant";
+import ArticleClauseAnimaux from "./articles/clause-animaux-bail";
 
 const ARTICLE_COMPONENTS = {
   "clause-bail-illegale": ArticleClauseBailIllegale,
+  "depot-de-garantie-bail": ArticleDepotDeGarantie,
+  "10-clauses-interdites-bail": Article10ClausesInterdites,
+  "bail-meuble-etudiant": ArticleBailMeubleEtudiant,
+  "clause-animaux-bail": ArticleClauseAnimaux,
 };
 
 const SITE_URL = "https://www.check-ton-bail.fr";

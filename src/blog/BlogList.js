@@ -109,7 +109,7 @@ export default function BlogList({ navigate }) {
 }
 
 function ArticleCard({ article, navigate }) {
-  const isAvailable = article.slug === "clause-bail-illegale";
+  const isAvailable = true;
 
   return (
     <div
@@ -147,23 +147,7 @@ function ArticleCard({ article, navigate }) {
       >
         {article.category}
       </span>
-      {!isAvailable && (
-        <span
-          style={{
-            display: "inline-block",
-            background: "#f0f0f0",
-            color: "#888",
-            fontSize: "0.7rem",
-            fontWeight: 600,
-            padding: "0.2rem 0.6rem",
-            borderRadius: "100px",
-            marginBottom: "0.75rem",
-            marginLeft: "0.5rem",
-          }}
-        >
-          Bientôt
-        </span>
-      )}
+
       <h2
         style={{
           fontSize: "1.05rem",
