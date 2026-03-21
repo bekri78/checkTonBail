@@ -1199,10 +1199,7 @@ function App() {
               <li className="fr-footer__bottom-item">
                 <span className="fr-footer__bottom-link">&copy; {new Date().getFullYear()} CheckTonBail</span>
               </li>
-              <li className="fr-footer__bottom-item">
-                <button className="fr-footer__bottom-link" onClick={() => setCurrentPage("faq")}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>FAQ</button>
-              </li>
+
               <li className="fr-footer__bottom-item">
                 <button className="fr-footer__bottom-link" onClick={() => setCurrentPage("mentions")}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>{t('legalNotice')}</button>
