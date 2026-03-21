@@ -101,6 +101,9 @@
       "permanent": true
     }
   ],
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "trailingSlash": false,
   "cleanUrls": true
 }
