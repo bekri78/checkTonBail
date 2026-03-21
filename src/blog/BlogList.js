@@ -28,18 +28,6 @@ export default function BlogList({ navigate }) {
 
   return (
     <div className="fr-container" style={{ maxWidth: "900px", padding: "2rem 1rem 4rem" }}>
-      {/* Breadcrumb */}
-      <nav aria-label="Fil d'ariane" style={{ marginBottom: "1.5rem" }}>
-        <ol style={{ display: "flex", gap: "0.5rem", listStyle: "none", padding: 0, margin: 0, fontSize: "0.875rem", color: "#666" }}>
-          <li>
-            <button onClick={() => navigate("analyse")} style={{ background: "none", border: "none", color: "#000091", cursor: "pointer", padding: 0, textDecoration: "underline" }}>
-              Accueil
-            </button>
-          </li>
-          <li style={{ color: "#999" }}>›</li>
-          <li style={{ color: "#444" }}>Blog</li>
-        </ol>
-      </nav>
 
       {/* Header */}
       <header style={{ marginBottom: "3rem" }}>
