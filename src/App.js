@@ -411,8 +411,7 @@ function AnalyseBail({ userId, t }) {
                 bailText: savedText,
                 fileName: savedFileName || "bail.pdf",
                 userId,
-                checkoutSessionId: sessionId,
-                country: 'FR'
+                checkoutSessionId: sessionId
               })
             });
 
@@ -475,15 +474,24 @@ function AnalyseBail({ userId, t }) {
     setCurrentStep('preparing');
 
     try {
-      // Step 1: extract text from PDF
       const formData = new FormData();
       formData.append('file', file);
 
-      const prepRes = await fetch(`${API_BASE}/api/prepare-analysis`, {
-        method: "POST",
-        body: formData,
-      });
-      const prepData = await prepRes.json();
+      // Lancer l'extraction PDF et la création de session Stripe en parallèle
+      // (elles sont indépendantes : la session ne dépend pas du contenu du bail)
+      const [prepRes, checkoutRes] = await Promise.all([
+        fetch(`${API_BASE}/api/prepare-analysis`, { method: "POST", body: formData }),
+        fetch(`${API_BASE}/api/create-checkout-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, email: userEmail || undefined })
+        })
+      ]);
+
+      const [prepData, checkoutData] = await Promise.all([
+        prepRes.json(),
+        checkoutRes.json()
+      ]);
 
       if (!prepRes.ok || !prepData.success) {
         throw new Error(prepData.error || t('errorUnknown'));
@@ -500,14 +508,6 @@ function AnalyseBail({ userId, t }) {
       setAnalysisFileName(fileName);
 
       trackEvent('begin_checkout', { event_category: 'funnel', value: PRICE_NUMERIC, currency: 'EUR' });
-
-      // Step 2: create checkout session
-      const checkoutRes = await fetch(`${API_BASE}/api/create-checkout-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, email: userEmail || undefined })
-      });
-      const checkoutData = await checkoutRes.json();
 
       if (checkoutData.success && checkoutData.clientSecret) {
         setCheckoutClientSecret(checkoutData.clientSecret);

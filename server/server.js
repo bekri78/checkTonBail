@@ -2,15 +2,17 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import rateLimit from "express-rate-limit";
 
 import multer from "multer";
 import { createRequire } from "module";
 import { pdfToPng } from "pdf-to-png-converter";
 import Stripe from "stripe";
-import { canAnalyze, trackAnalysis, getMonthlyStats, isSessionUsed, markSessionUsed } from "./usage-tracker.js";
+import { canAnalyze, trackAnalysis, getMonthlyStats, checkAndMarkSession } from "./usage-tracker.js";
 import fs from "fs";
+import fsPromises from "fs/promises";
 import vision from "@google-cloud/vision";
-import { getCountryPrompt, getCountryInfo } from "./country-prompts.js";
+import { getCountryInfo } from "./country-prompts.js";
 import crypto from "crypto";
 
 const require = createRequire(import.meta.url);
@@ -61,17 +63,17 @@ function getCachedOCR(buffer) {
 function setCachedOCR(buffer, text) {
   const key = getCacheKey(buffer);
   ocrCache.set(key, { text, timestamp: Date.now() });
-  // Nettoyer anciennes entrées si > 500
+  // Supprimer les 50 plus anciennes entrées si > 500
   if (ocrCache.size > 500) {
-    const oldest = ocrCache.keys().next().value;
-    ocrCache.delete(oldest);
+    const sorted = [...ocrCache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+    sorted.slice(0, 50).forEach(([k]) => ocrCache.delete(k));
   }
 }
 
 // Multer setup for file upload (optimisé)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 } // 20 Mo max
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 Mo max (aligné avec le frontend)
 });
 
 // CORS - Autoriser le frontend (localhost en dev, domaine en prod)
@@ -83,6 +85,33 @@ app.use(cors({
   origin: corsOrigins,
 }));
 app.use(express.json());
+
+// ==========================================
+// 🚦 RATE LIMITING
+// ==========================================
+const ocrLimiter = rateLimit({
+  windowMs: 60 * 1000,       // 1 minute
+  max: 5,                    // 5 extractions PDF/min par IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Trop de requêtes, réessayez dans une minute." }
+});
+
+const checkoutLimiter = rateLimit({
+  windowMs: 60 * 1000,       // 1 minute
+  max: 10,                   // 10 sessions Stripe/min par IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Trop de requêtes, réessayez dans une minute." }
+});
+
+const sessionStatusLimiter = rateLimit({
+  windowMs: 60 * 1000,       // 1 minute
+  max: 30,                   // 30 vérifications/min par IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Trop de requêtes, réessayez dans une minute." }
+});
 
 // ==========================================
 // 🔒 SECURITY HEADERS
@@ -109,19 +138,19 @@ function loadStats() {
   } catch (err) {
     console.error("Erreur lecture stats.json:", err.message);
   }
-  return { totalAnalyses: 247, totalClausesDetected: 312, lastUpdated: null };
+  return { totalAnalyses: 0, totalClausesDetected: 0, lastUpdated: null };
 }
 
-function saveStats(data) {
+async function saveStats(data) {
   data.lastUpdated = new Date().toISOString();
-  fs.writeFileSync(STATS_FILE, JSON.stringify(data, null, 2));
+  await fsPromises.writeFile(STATS_FILE, JSON.stringify(data, null, 2));
 }
 
-function incrementStats(clausesCount) {
+async function incrementStats(clausesCount) {
   const stats = loadStats();
   stats.totalAnalyses += 1;
   stats.totalClausesDetected += (clausesCount || 0);
-  saveStats(stats);
+  await saveStats(stats);
   return stats;
 }
 
@@ -326,13 +355,19 @@ NE CHANGE PAS la structure.
 `.trim();
 
 
+  // Tronquer le texte à 30 000 caractères (couvre ~20 pages de bail dense)
+  const truncatedText = bailText.length > 30000
+    ? bailText.slice(0, 30000) + "\n\n[... document tronqué à 30 000 caractères ...]"
+    : bailText;
+
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    temperature: 0, // Résultats déterministes et reproductibles
+    temperature: 0,           // Résultats déterministes
+    max_tokens: 3500,         // Cap la génération — un JSON complet tient en ~1500-2500 tokens
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: bailText }
+      { role: "user", content: truncatedText }
     ]
   });
 
@@ -388,10 +423,11 @@ async function extractTextFromPDF(buffer) {
 
     const pngStart = Date.now();
     // viewportScale réduit: 1.8 au lieu de 2.0 = ~20% plus rapide, qualité suffisante
+    // viewportScale 1.0 : qualité suffisante pour Google Vision, conversion ~30% plus rapide
     const pngPages = await pdfToPng(buffer, {
       disableFontFace: false,
       useSystemFonts: false,
-      viewportScale: 1.2,
+      viewportScale: 1.0,
     });
     console.log(`   📄 ${pngPages.length} pages converties en ${Date.now() - pngStart}ms`);
 
@@ -462,8 +498,12 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Route admin : stats d'usage (protège-la en production !)
+// Route admin : stats d'usage (protégée par clé API)
 app.get("/api/stats", async (req, res) => {
+  const adminKey = process.env.ADMIN_API_KEY;
+  if (!adminKey || req.headers['x-admin-key'] !== adminKey) {
+    return res.status(401).json({ success: false, error: "Non autorisé" });
+  }
   try {
     const stats = await getMonthlyStats();
     res.json({ success: true, stats });
@@ -483,7 +523,7 @@ app.get("/api/public-stats", (req, res) => {
 });
 
 // 📄 Route PRÉPARATION : extraction du texte avant paiement
-app.post("/api/prepare-analysis", upload.single('file'), async (req, res) => {
+app.post("/api/prepare-analysis", ocrLimiter, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "Fichier manquant." });
@@ -502,14 +542,13 @@ app.post("/api/prepare-analysis", upload.single('file'), async (req, res) => {
   }
 });
 
-// 💰 Route ANALYSE PAYANTE avec texte déjà extrait (pas d'OCR) - MULTILINGUE
+// 💰 Route ANALYSE PAYANTE avec texte déjà extrait (pas d'OCR)
 app.post("/api/analyse-bail-text", async (req, res) => {
   try {
-    const { bailText, fileName, userId, checkoutSessionId, country: reqCountry } = req.body;
+    const { bailText, fileName, userId, checkoutSessionId } = req.body;
 
-    // 🌍 Récupérer le pays (défaut: France)
-    const validCountries = ['FR', 'ES', 'PT', 'BE', 'DE', 'UK'];
-    const country = validCountries.includes(reqCountry) ? reqCountry : 'FR';
+    // Seule la France est supportée pour l'instant
+    const country = 'FR';
     const countryInfo = getCountryInfo(country);
 
     if (!bailText || bailText.length < 100) {
@@ -535,15 +574,6 @@ app.post("/api/analyse-bail-text", async (req, res) => {
           needsPayment: true
         });
       }
-      // 🛡️ Vérifier que cette session n'a pas déjà été utilisée
-      if (await isSessionUsed(checkoutSessionId)) {
-        console.error(`❌ Session déjà utilisée: ${checkoutSessionId}`);
-        return res.status(402).json({
-          success: false,
-          error: "Cette session de paiement a déjà été utilisée",
-          needsPayment: true
-        });
-      }
       console.log(`✅ Paiement vérifié via Checkout Session: ${checkoutSessionId}`);
     } catch (stripeErr) {
       console.error(`❌ Erreur vérification Stripe:`, stripeErr.message);
@@ -565,13 +595,20 @@ app.post("/api/analyse-bail-text", async (req, res) => {
       });
     }
 
+    // 🔒 Vérifier + marquer la session en une opération atomique (anti-replay)
+    const sessionCheck = await checkAndMarkSession(checkoutSessionId);
+    if (!sessionCheck.allowed) {
+      console.error(`❌ Session déjà utilisée: ${checkoutSessionId}`);
+      return res.status(402).json({
+        success: false,
+        error: "Cette session de paiement a déjà été utilisée",
+        needsPayment: true
+      });
+    }
+
     console.log("📄 Analyse PAYANTE (texte pré-extrait):", fileName);
-    console.log(`   🌍 Pays: ${countryInfo.name} (${country})`);
     console.log("   Caractères:", bailText.length);
     console.log("   Utilisateur:", userId);
-
-    // 🔒 Marquer la session comme utilisée (anti-replay)
-    await markSessionUsed(checkoutSessionId);
 
     // Analyse GPT complète avec le pays
     const result = await analyseBailWithGPT(bailText, country);
@@ -606,7 +643,7 @@ app.post("/api/analyse-bail-text", async (req, res) => {
 // ============================================
 
 // Créer une Checkout Session embedded (avec support codes promo)
-app.post("/api/create-checkout-session", async (req, res) => {
+app.post("/api/create-checkout-session", checkoutLimiter, async (req, res) => {
   try {
     const { userId, email } = req.body;
 
@@ -652,7 +689,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
 });
 
 // Vérifier le statut d'une Checkout Session
-app.get("/api/checkout-session-status", async (req, res) => {
+app.get("/api/checkout-session-status", sessionStatusLimiter, async (req, res) => {
   try {
     const { session_id } = req.query;
 
@@ -718,6 +755,10 @@ process.on('SIGTERM', () => {
     console.log('✅ Serveur arrêté proprement');
     process.exit(0);
   });
-  // Forcer la sortie après 5 min si des requêtes traînent (OCR peut être long)
-  setTimeout(() => process.exit(1), 300000);
+  // Forcer la sortie après le délai configuré (défaut : 60s)
+  const shutdownTimeout = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '60000', 10);
+  setTimeout(() => {
+    console.warn('⚠️ Shutdown forcé après timeout');
+    process.exit(1);
+  }, shutdownTimeout);
 });

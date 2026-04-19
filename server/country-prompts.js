@@ -128,14 +128,14 @@ Réponds en FRANÇAIS.
   }
 };
 
-// Get prompt
+// Get prompt — seule la France est supportée
 export const getCountryPrompt = (countryCode, type = 'teaser') => {
   const country = COUNTRY_LEGAL_PROMPTS['FR'];
   return type === 'teaser' ? country.teaserPrompt.trim() : country.fullPrompt.trim();
 };
 
-// Get country info
-export const getCountryInfo = (countryCode) => {
+// Get country info — seule la France est supportée
+export const getCountryInfo = (_countryCode) => {
   return COUNTRY_LEGAL_PROMPTS['FR'];
 };
 
