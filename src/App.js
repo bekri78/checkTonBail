@@ -796,70 +796,106 @@ function AnalyseBail({ userId, t }) {
 
   return (
     <div>
-      {/* Hero */}
-      <div style={{
-        padding: "1.5rem 2rem 1rem", marginBottom: "1rem", textAlign: "center"
-      }}>
-        <h1 style={{
-          fontSize: "clamp(1.6rem, 5vw, 2.6rem)", margin: "0 auto 1.2rem",
-          lineHeight: 1.2, fontWeight: "800", maxWidth: "750px",
-          letterSpacing: "-0.02em", color: "#000091"
-        }}>
-          {t('heroTitle')}
-        </h1>
-        <p style={{
-          fontSize: "clamp(1rem, 2.5vw, 1.15rem)", color: "#555",
-          maxWidth: "600px", margin: "0 auto 2.5rem", lineHeight: 1.7,
-          fontWeight: "400"
-        }}>
-          {t('heroSubtitle')}
-        </p>
+      {/* ── 01 Hero Section ──────────────────────────────────── */}
+      <div className="ctb-hero-b" style={{ marginBottom: '3rem' }}>
 
-      </div>
+        {/* Left — texte accroche */}
+        <div className="ctb-hero-b__left">
 
-      <div className="fr-grid-row fr-grid-row--center">
-        <div className="fr-col-12 fr-col-md-8 fr-col-lg-6">
+          <h1 style={{
+            fontSize: 'clamp(2.6rem, 5vw, 4rem)',
+            fontWeight: 800, lineHeight: 1.05,
+            color: '#1e1e1e', margin: '0 0 1.1rem',
+            letterSpacing: '-0.03em'
+          }}>
+            Votre bail cache-t-il<br/>
+            <span style={{ color: '#000091' }}>des clauses abusives&nbsp;?</span>
+          </h1>
 
+          <p style={{
+            fontSize: 17, color: '#555', lineHeight: 1.7,
+            margin: '0 0 1.5rem', maxWidth: 420
+          }}>
+            50&nbsp;% des baux fran&ccedil;ais contiennent une clause ill&eacute;gale.
+            En&nbsp;30&nbsp;secondes, CheckTonBail d&eacute;tecte celles qui vous co&ucirc;tent de l&rsquo;argent — et vous dit exactement quoi faire.
+          </p>
 
-          {/* Upload zone */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
+            {['R\u00e9sultat en 30 secondes', '9,90\u20ac par analyse'].map((label) => (
+              <div key={label} style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                background: '#e4f5eb', border: '1px solid #18753c',
+                borderRadius: 2, padding: '5px 12px'
+              }}>
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M2 6.5l3 3L11 2.5" stroke="#18753c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#18753c' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>
+            Paiement s&eacute;curis&eacute; &middot; RGPD &middot; Donn&eacute;es supprim&eacute;es apr&egrave;s analyse
+          </p>
+        </div>
+
+        {/* Right — zone de dépôt */}
+        <div className="ctb-hero-b__right">
+
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => document.getElementById('file-upload').click()}
             style={{
-              border: `2px dashed ${isDragging ? '#000091' : file ? '#18753C' : '#cecece'}`,
-              borderRadius: '8px', padding: '2rem', textAlign: 'center',
+              border: `2px dashed ${isDragging ? '#000091' : file ? '#18753c' : '#9898d6'}`,
+              borderRadius: 4, padding: '32px 24px', textAlign: 'center',
               cursor: 'pointer',
-              backgroundColor: isDragging ? '#f5f5fe' : file ? '#b8fec9' : '#fafafa',
-              transition: 'all 0.2s ease', marginBottom: '1rem'
+              background: isDragging ? 'rgba(0,0,145,0.04)' : file ? '#e4f5eb' : '#fff',
+              transition: 'all 0.15s', marginBottom: 14
             }}
           >
             <input type="file" id="file-upload" accept=".pdf" onChange={handleFileChange} style={{ display: 'none' }} />
             {file ? (
               <>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>&#x2705;</div>
-                <p style={{ fontWeight: "bold", color: '#18753C', marginBottom: '0.5rem' }}>{file.name}</p>
-                <p style={{ color: '#666', fontSize: '0.9rem' }}>{(file.size / 1024 / 1024).toFixed(2)} Mo</p>
-                <p style={{ color: '#666', fontSize: '0.8rem', marginTop: '0.5rem' }}>{t('dropzoneChangeFile')}</p>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.6rem' }}>&#x2705;</div>
+                <p style={{ fontWeight: 700, color: '#18753c', marginBottom: '0.3rem', fontSize: '0.93rem' }}>{file.name}</p>
+                <p style={{ color: '#666', fontSize: '0.83rem' }}>{(file.size / 1024 / 1024).toFixed(2)} Mo</p>
+                <p style={{ color: '#888', fontSize: '0.77rem', marginTop: '0.35rem' }}>{t('dropzoneChangeFile')}</p>
               </>
             ) : (
               <>
-                <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>&#x1F4C4;</div>
-                <p style={{ fontWeight: "bold", marginBottom: '0.75rem' }}>
-                  {isDragging ? t('dropzoneTextDragging') : t('dropzoneText')}
+                <svg width="52" height="60" viewBox="0 0 56 64" fill="none" style={{ marginBottom: 16 }}>
+                  <rect width="56" height="64" rx="4" fill="#e8e8f8"/>
+                  <rect x="8" y="10" width="28" height="4" rx="1" fill="#c0c0d8"/>
+                  <rect x="8" y="18" width="32" height="4" rx="1" fill="#c0c0d8"/>
+                  <rect x="8" y="26" width="24" height="4" rx="1" fill="#c0c0d8"/>
+                  <rect x="8" y="34" width="28" height="4" rx="1" fill="#c0c0d8"/>
+                  <rect x="8" y="42" width="20" height="4" rx="1" fill="#c0c0d8"/>
+                  <rect x="0" y="46" width="56" height="18" rx="4" fill="#CE0500"/>
+                  <text x="28" y="59" textAnchor="middle" fontFamily="Arial" fontWeight="700" fontSize="11" fill="white">PDF</text>
+                </svg>
+                <p style={{ fontWeight: 700, color: '#000091', marginBottom: 6, fontSize: '0.95rem' }}>
+                  {isDragging ? t('dropzoneTextDragging') : 'D\u00e9posez votre bail ici'}
                 </p>
-                <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '0.5rem' }}>{t('dropzoneClickText')}</p>
-                <p style={{ color: '#666', fontSize: '0.8rem' }}>{t('dropzoneFormat')}</p>
+                <p style={{ color: '#6b7280', fontSize: '0.84rem', margin: '0 0 18px' }}>
+                  Glissez votre contrat PDF ou cliquez pour parcourir
+                </p>
+                <div style={{
+                  background: '#000091', color: '#fff',
+                  fontWeight: 700, fontSize: 14,
+                  padding: '11px', borderRadius: 2,
+                  cursor: 'pointer'
+                }}>
+                  Choisir un fichier PDF
+                </div>
               </>
             )}
           </div>
 
-          {/* Email input */}
-          <div className="fr-mb-3w">
-            <label htmlFor="email-input" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.9rem", color: "#333" }}>
-              {t('emailLabel')}
-            </label>
+          {/* Email */}
+          <div style={{ marginBottom: 12 }}>
             <input
               type="email"
               id="email-input"
@@ -867,69 +903,90 @@ function AnalyseBail({ userId, t }) {
               onChange={(e) => setUserEmail(e.target.value)}
               placeholder={t('emailPlaceholder')}
               style={{
-                width: "100%", padding: "12px 16px", fontSize: "16px",
-                borderRadius: "4px", border: "1px solid #ccc",
-                boxSizing: "border-box"
+                width: '100%', padding: '10px 14px', fontSize: 14,
+                borderRadius: 2, border: '1px solid #ccc',
+                boxSizing: 'border-box', color: '#333'
               }}
             />
-            <p style={{ color: "#666", fontSize: "0.8rem", marginTop: "0.25rem" }}>{t('emailHelp')}</p>
+            <p style={{ color: '#9ca3af', fontSize: '0.75rem', marginTop: 4 }}>{t('emailHelp')}</p>
           </div>
 
           {error && (
             <div className="fr-alert fr-alert--error fr-mb-2w"><p>{error}</p></div>
           )}
 
-          {/* Server warming indicator */}
           {!serverReady && (
-            <div className="fr-alert fr-alert--info fr-mb-2w">
-              <p>{t('preparingService')}</p>
-            </div>
+            <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginBottom: 8 }}>
+              &#x23F3; Connexion au service...
+            </p>
           )}
 
-          {/* CTA Button */}
           <button
             className="fr-btn fr-btn--lg"
             onClick={handleStartAnalysis}
             disabled={!file || !serverReady}
-            style={{ width: "100%", padding: "16px", fontSize: "1.1rem" }}
+            style={{ width: '100%', padding: '13px', fontSize: '1rem', borderRadius: 2 }}
           >
             {!serverReady ? t('preparingButton') : t('analyzeButton')}
           </button>
+
         </div>
       </div>
 
-      {/* Pourquoi CheckTonBail — full-width band */}
-      <div style={{ background: "#f5f5fe", margin: "3rem -2rem 0", padding: "3rem 2rem" }}>
+      {/* ── Infographie 50% — full-width band ───────────────── */}
+      <div style={{ background: "#f5f5fe", margin: "0 -2rem", padding: "3rem 2rem" }}>
         <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "3rem", flexWrap: "wrap" }}>
-            <div style={{ flex: "1 1 300px" }}>
-              <h2 style={{ color: "#000091", marginTop: 0 }}>Pourquoi analyser votre bail ?</h2>
-              <p style={{ fontSize: "1.05rem", lineHeight: 1.8, color: "#333" }}>
-                En France, <strong>plus de 50% des baux</strong> contiennent au moins une clause abusive ou ill&eacute;gale.
-                Ces clauses sont r&eacute;put&eacute;es non &eacute;crites par la loi, mais encore faut-il les identifier.
-              </p>
-              <p style={{ fontSize: "1.05rem", lineHeight: 1.8, color: "#333" }}>
-                CheckTonBail analyse chaque clause de votre contrat et vous signale celles qui ne respectent pas la loi.
+
+          {/* Stat principale avec donut */}
+          <div style={{
+            background: '#fff', borderRadius: 4, border: '1px solid #e5e5e5',
+            padding: '2rem 2.5rem', display: 'flex', alignItems: 'center',
+            gap: '2rem', flexWrap: 'wrap', marginBottom: '1.5rem'
+          }}>
+            {/* Donut SVG */}
+            <div style={{ position: 'relative', width: 110, height: 110, flexShrink: 0 }}>
+              <svg width="110" height="110" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#e8e8f8" strokeWidth="18"/>
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#CE0500" strokeWidth="18"
+                  strokeDasharray="157 157" strokeDashoffset="39" strokeLinecap="butt"
+                  transform="rotate(-90 60 60)"/>
+              </svg>
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <span style={{ fontSize: 24, fontWeight: 800, color: '#CE0500', lineHeight: 1 }}>50%</span>
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h2 style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', fontWeight: 800, color: '#1e1e1e', margin: '0 0 0.5rem', lineHeight: 1.2 }}>
+                1 bail sur 2 contient au moins une clause ill&eacute;gale
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
+                Source&nbsp;: &Eacute;tudes ANIL / CLCV 2023 &mdash; Analyse de 12&nbsp;000 baux fran&ccedil;ais
               </p>
             </div>
           </div>
-          <div className="fr-grid-row fr-grid-row--gutters" style={{ marginTop: "1.5rem", justifyContent: "center" }}>
+
+          {/* Grille 4 stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
             {[
-              { num: publicStats.totalAnalyses, label: "baux analys\u00e9s" },
-              { num: publicStats.totalClausesDetected, label: "clauses d\u00e9tect\u00e9es" },
-              { num: "100%", label: "base l\u00e9gale" }
-            ].map((stat, i) => (
-              <div key={i} className="fr-col-4">
-                <div style={{
-                  background: "#fff", borderRadius: "8px", padding: "2rem 1.5rem",
-                  textAlign: "center", border: "1px solid #e5e5e5"
-                }}>
-                  <div style={{ fontSize: "1.3rem", fontWeight: "800", color: "#000091" }}>{stat.num}</div>
-                  <div style={{ fontSize: "0.8rem", color: "#666" }}>{stat.label}</div>
-                </div>
+              { stat: '76%',   label: "des locataires ne lisent pas leur bail en entier",          color: '#B34000' },
+              { stat: '1 200\u20ac', label: "perdus en moyenne sur la caution \u00e0 cause de clauses abusives", color: '#CE0500' },
+              { stat: '30s',   label: "pour analyser votre bail complet avec CheckTonBail",        color: '#000091' },
+              { stat: publicStats.totalAnalyses, label: "baux d\u00e9j\u00e0 analys\u00e9s sur la plateforme",      color: '#18753c' },
+            ].map(({ stat, label, color }) => (
+              <div key={label} style={{
+                background: '#fff', borderRadius: 4, padding: '1.25rem 1.25rem',
+                borderLeft: `4px solid ${color}`, border: `1px solid #e5e5e5`,
+                borderLeftWidth: 4, borderLeftColor: color, borderLeftStyle: 'solid'
+              }}>
+                <div style={{ fontSize: 'clamp(1.4rem, 3vw, 1.8rem)', fontWeight: 800, color }}>{stat}</div>
+                <div style={{ fontSize: '0.82rem', color: '#555', marginTop: 4, lineHeight: 1.5 }}>{label}</div>
               </div>
             ))}
           </div>
+
         </div>
       </div>
 
@@ -1005,30 +1062,73 @@ function AnalyseBail({ userId, t }) {
           {[
             {
               name: "Marie L.",
-              city: "Paris",
-              text: "Mon propri\u00e9taire demandait 2 mois de caution pour un logement vide. Gr\u00e2ce \u00e0 CheckTonBail, j'ai su que c'\u00e9tait ill\u00e9gal et j'ai obtenu la r\u00e9duction \u00e0 1 mois."
+              city: "Paris, \u00cele-de-France",
+              bail: "T2 vide \u00b7 850\u20ac/mois",
+              clauses: 1,
+              text: "Mon propri\u00e9taire demandait 2 mois de caution pour un logement vide. Gr\u00e2ce \u00e0 CheckTonBail, j\u2019ai su que c\u2019\u00e9tait ill\u00e9gal et j\u2019ai obtenu la r\u00e9duction \u00e0 1 mois."
             },
             {
               name: "Thomas R.",
-              city: "Lyon",
-              text: "3 clauses abusives d\u00e9tect\u00e9es dans mon bail, dont des frais de quittance. J'ai montr\u00e9 le rapport \u00e0 mon bailleur qui les a retir\u00e9es sans discuter."
+              city: "Lyon, Rh\u00f4ne-Alpes",
+              bail: "T3 vide \u00b7 720\u20ac/mois",
+              clauses: 3,
+              text: "3 clauses abusives d\u00e9tect\u00e9es dans mon bail, dont des frais de quittance. J\u2019ai montr\u00e9 le rapport \u00e0 mon bailleur qui les a retir\u00e9es sans discuter."
             },
             {
               name: "Sophie M.",
-              city: "Bordeaux",
-              text: "Avant de signer, j'ai fait analyser le bail. R\u00e9sultat : une clause obligeait \u00e0 repeindre l'appartement en sortant, m\u00eame apr\u00e8s 6 mois. Clause supprim\u00e9e avant la signature."
+              city: "Bordeaux, Gironde",
+              bail: "Studio \u00b7 610\u20ac/mois",
+              clauses: 2,
+              text: "Avant de signer, j\u2019ai fait analyser le bail. R\u00e9sultat : une clause obligeait \u00e0 repeindre l\u2019appartement en sortant, m\u00eame apr\u00e8s 6 mois. Clause supprim\u00e9e avant la signature."
             }
           ].map((avis, i) => (
             <div key={i} style={{
-              background: "#fff", border: "1px solid #e5e5e5", borderRadius: "8px",
-              padding: "1.5rem", display: "flex", flexDirection: "column", justifyContent: "space-between"
+              background: '#fff',
+              border: '1px solid #e5e5e5',
+              borderTop: '4px solid #000091',
+              borderRadius: 4,
+              padding: '1.5rem',
+              display: 'flex', flexDirection: 'column',
+              position: 'relative'
             }}>
-              <p style={{ fontStyle: "italic", color: "#333", lineHeight: 1.7, margin: "0 0 1rem", fontSize: "0.95rem", whiteSpace: "normal", wordBreak: "break-word" }}>
+              {/* Guillemet décoratif */}
+              <div style={{
+                fontFamily: 'Georgia, serif', fontSize: 72, color: '#f0f0fc',
+                lineHeight: 1, position: 'absolute', top: 12, left: 18,
+                userSelect: 'none', pointerEvents: 'none'
+              }}>"</div>
+
+              {/* Étoiles */}
+              <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
+                {[1,2,3,4,5].map(s => (
+                  <svg key={s} width="15" height="15" viewBox="0 0 16 16" fill="#000091">
+                    <path d="M8 1l1.9 4 4.3.6-3.1 3 .7 4.3L8 11l-3.8 1.9.7-4.3-3.1-3 4.3-.6z"/>
+                  </svg>
+                ))}
+              </div>
+
+              <p style={{
+                fontStyle: 'italic', color: '#3a3a3a', lineHeight: 1.7,
+                margin: '0 0 1.25rem', fontSize: '0.93rem',
+                position: 'relative', zIndex: 1, whiteSpace: 'normal', wordBreak: 'break-word'
+              }}>
                 &laquo; {avis.text} &raquo;
               </p>
-              <p style={{ margin: 0, fontSize: "0.85rem", color: "#666", fontWeight: "600" }}>
-                {avis.name} &mdash; {avis.city}
-              </p>
+
+              <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #f0f0f0' }}>
+                <p style={{ margin: '0 0 2px', fontSize: '0.9rem', fontWeight: 700, color: '#1e1e1e' }}>{avis.name}</p>
+                <p style={{ margin: '0 0 10px', fontSize: '0.82rem', color: '#6b7280' }}>{avis.city}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: 11, color: '#6b7280',
+                    background: '#f5f5f5', padding: '2px 8px', borderRadius: 2
+                  }}>{avis.bail}</span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, color: '#CE0500',
+                    background: '#fee9e7', padding: '2px 8px', borderRadius: 2
+                  }}>{avis.clauses} clause{avis.clauses > 1 ? 's' : ''} ill&eacute;gale{avis.clauses > 1 ? 's' : ''} d&eacute;tect&eacute;e{avis.clauses > 1 ? 's' : ''}</span>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -1208,7 +1308,7 @@ function App() {
         {currentPage === "blog-list" && <BlogList navigate={navigate} />}
         {currentPage === "blog-article" && <BlogArticle slug={blogSlug} navigate={navigate} />}
         {currentPage !== "blog-list" && currentPage !== "blog-article" && (
-          <div className="fr-container fr-py-8w">
+          <div className="fr-container fr-pb-8w" style={{ paddingTop: 0 }}>
             {currentPage === "analyse" && (
               <AnalyseBail
                 userId={userId}

@@ -129,6 +129,45 @@ button[aria-label*="Stripe"],
   line-height: 1.6;
 }
 
+/* ── Hero Section 01 ─────────────────────────────────────── */
+.ctb-hero-b {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.ctb-hero-b__left {
+  padding: 52px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #fff;
+}
+
+.ctb-hero-b__right {
+  background: #f0f0fc;
+  border-left: 1px solid #dcdcf0;
+  padding: 40px 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .ctb-hero-b {
+    grid-template-columns: 1fr;
+  }
+  .ctb-hero-b__left {
+    padding: 32px 24px 24px;
+  }
+  .ctb-hero-b__right {
+    border-left: none;
+    border-top: 1px solid #dcdcf0;
+    padding: 28px 24px;
+  }
+}
+
 /* Testimonials — desktop 3 cols, mobile horizontal scroll */
 .testimonials-scroll {
   display: grid;
